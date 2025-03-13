@@ -3,7 +3,6 @@ import { Routes, Route } from "react-router-dom";
 import Sidebar from "./Menu/Sidebar";
 import Header from "./Header/Header";
 import Dashboard from "../pages/Dashboard";
-import BloodRequestTable from "../pages/BloodRequest/ReadBloodRequest";
 import { Box } from "@mui/material";
 import { appColors } from "../theme/appColors";
 
@@ -32,10 +31,10 @@ const AppRoutes = () => {
         <Header toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/donor" element={<BloodRequestTable />} />
-          <Route path="/blood-bank" element={<BloodRequestTable />} />
-          <Route path="/blood-request" element={<BloodRequestTable />} />
-          <Route path="/event-campaign" element={<BloodRequestTable />} />
+          <Route path="/donor" element={<Dashboard />} />
+          <Route path="/blood-bank" element={<Dashboard />} />
+          <Route path="/blood-request" element={<Dashboard />} />
+          <Route path="/event-campaign" element={<Dashboard />} />
         </Routes>
       </Box>
     </Box>
