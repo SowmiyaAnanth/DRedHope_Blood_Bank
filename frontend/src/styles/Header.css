@@ -1,0 +1,77 @@
+Header Container
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: var(--brand-60);
+    color: var(--white);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 1000;
+  }
+  
+  /* Left Section */
+  .header-left {
+    flex: 1;
+  }
+  
+  .menu-icon {
+    font-size: 28px;
+    cursor: pointer;
+  }
+  
+  /* Center Section: Glowing Text */
+  .header-center {
+    flex: 2;
+    display: flex;
+    justify-content: center;
+  }
+  
+  .glowing-text {
+    font-size: 34px;
+    font-weight: bold;
+    color: #d81b1b;
+    text-transform: uppercase;
+    text-shadow: 0 0 5px #fff, 0 0 10px #ff4444, 0 0 15px #ff2222, 0 0 20px #ff0000;
+    animation: glow 1.5s infinite alternate;
+  }
+  
+  @keyframes glow {
+    0% {
+      text-shadow: 0 0 5px #fff, 0 0 10px #ff4444, 0 0 15px #ff2222, 0 0 20px #ff0000;
+    }
+    100% {
+      text-shadow: 0 0 5px #fff, 0 0 12px #ff6666, 0 0 20px #ff4444, 0 0 25px #ff2222;
+    }
+  }
+  
+  /* Right Section */
+  .header-right {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+  }
+  
+  .icon {
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  /* Dark Mode */
+  .dark-mode {
+    background-color: #222;
+    color: #fff;
+  }
+  
+  .dark-mode .header-container {
+    background-color: #333;
+  }
+  
+  .dark-mode .glowing-text {
+    text-shadow: 0 0 5px #fff, 0 0 10px #4488ff, 0 0 15px #2266ff, 0 0 20px #0044ff;
+  }
+  
