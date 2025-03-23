@@ -22,9 +22,11 @@ import {
 } from "@mui/material";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import userIcon from "../../../assets/images/user.png";
+import request from "../../../assets/images/request.png";
 import Switch from "@mui/material/Switch";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { useNotifier } from "../../../components/Notification/Notifications"; 
 
 const BloodRequestForm = ({
   title,
@@ -37,6 +39,7 @@ const BloodRequestForm = ({
   const webcamRef = useRef(null);
   const [scanning, setScanning] = useState(false);
   const today = new Date().toISOString().split("T")[0];
+  const { notifySuccess } = useNotifier();
 
   const [formValues, setFormValues] = useState({
     requesterName: "",
@@ -113,6 +116,9 @@ const BloodRequestForm = ({
     e.preventDefault();
     if (!validateForm()) return;
     handleFormSubmit(formValues); // 🔁 Send to parent
+    notifySuccess(
+      data ? "Request updated successfully" : "Request created successfully"
+    );
     handleCloseDialog(); // optional: close modal after submit
   };
 
@@ -175,7 +181,7 @@ const BloodRequestForm = ({
               </Grid>
 
               <Grid item xs={12}>
-                <FieldHeader title="Requester Type" imgSrc={userIcon} />
+                <FieldHeader title="Requester Type" imgSrc={request} />
                 <RadioGroup
                   row
                   name="requesterType"

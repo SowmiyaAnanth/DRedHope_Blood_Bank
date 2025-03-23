@@ -19,7 +19,7 @@ const MagicMotionButton = ({ onClick }) => {
         cursor: "pointer",
         position: "relative",
         display: "inline-block",
-        backgroundColor: "hsl(0, 100%, 53.9%)",
+        background: "linear-gradient(90deg, hsl(249, 100%, 53.9%), hsl(230, 100%, 60%), hsl(210, 100%, 56%))",
         color: "#fff",
         px: "2.2rem",
         py: "0.9rem",
@@ -35,7 +35,7 @@ const MagicMotionButton = ({ onClick }) => {
           width: "80%",
           height: "40%",
           background:
-            "linear-gradient(80deg, hsl(341, 79.80%, 55.30%) 10%, hsl(344, 100.00%, 47.50%) 48%)",
+            "linear-gradient(80deg, hsl(189, 79.80%, 55.30%) 10%, hsl(344, 100.00%, 47.50%) 48%)",
           position: "absolute",
           bottom: "-4px",
           left: 0,

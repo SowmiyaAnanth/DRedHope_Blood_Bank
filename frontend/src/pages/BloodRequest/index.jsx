@@ -27,7 +27,6 @@ import BloodtypeIcon from "@mui/icons-material/Bloodtype";
 import { Person, Numbers, Event, LocationOn } from "@mui/icons-material";
 import { CardActions, Tooltip } from "@mui/material";
 
-
 const mockBloodRequests = [
   {
     id: 1,
@@ -151,7 +150,15 @@ const BloodRequestBoard = () => {
     <Box>
       <Grid container justifyContent="space-between" alignItems="center" mb={6}>
         <BloodRequestButton onClick={() => setOpenForm(true)} />
-        <Stack direction="row" spacing={2}>
+        <Stack
+          direction="row"
+          spacing={2}
+          sx={{
+            //backgroundColor: "#FFB6B6", // light red
+            borderRadius: 2,
+            p: 2,
+          }}
+        >
           <TextField
             select
             label="Blood Group"
@@ -160,7 +167,24 @@ const BloodRequestBoard = () => {
             onChange={(e) =>
               setFilter((prev) => ({ ...prev, bloodGroup: e.target.value }))
             }
-            sx={{ minWidth: 150 }}
+            sx={{
+              minWidth: 250,
+              backgroundColor: "#fff0f0", // soft field background
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: "#f28b82", // border color
+                },
+                "&:hover fieldset": {
+                  borderColor: "#e53935", // darker red on hover
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#d32f2f", // red when focused
+                },
+              },
+              "& .MuiInputLabel-root": {
+                color: "#c62828", // label color
+              },
+            }}
           >
             <MenuItem value="">
               <BloodtypeIcon fontSize="small" sx={{ mr: 1 }} />
@@ -182,7 +206,24 @@ const BloodRequestBoard = () => {
             onChange={(e) =>
               setFilter((prev) => ({ ...prev, emergencyLevel: e.target.value }))
             }
-            sx={{ minWidth: 150 }}
+            sx={{
+              minWidth: 250,
+              backgroundColor: "#fff0f0", // same soft background
+              "& .MuiOutlinedInput-root": {
+                "& fieldset": {
+                  borderColor: "#f28b82",
+                },
+                "&:hover fieldset": {
+                  borderColor: "#e53935",
+                },
+                "&.Mui-focused fieldset": {
+                  borderColor: "#d32f2f",
+                },
+              },
+              "& .MuiInputLabel-root": {
+                color: "#c62828",
+              },
+            }}
           >
             <MenuItem value="">
               <Typography>All</Typography>
@@ -202,33 +243,55 @@ const BloodRequestBoard = () => {
       <Grid container spacing={2}>
         {["Patient", "Hospital"].map((type) => (
           <Grid item xs={12} md={6} key={type}>
-            <Typography variant="h6" mb={1}>
-              {type} Requests
-            </Typography>
             {groupedRequests[type].map((request) => (
               <Card
                 key={request.id}
                 sx={{
+                  mb: 3, // ✅ adds vertical space between cards (like a "row gap")
                   borderRadius: 4,
                   bgcolor: "white",
                   boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
                   transition: "transform 0.3s, box-shadow 0.3s",
                   "&:hover": {
                     transform: "translateY(-6px)",
-                    boxShadow: "0 6px 25px rgba(255,0,0,0.6)",
+                    boxShadow: "0 6px 25px rgba(152, 0, 234, 0.6)",
                   },
                 }}
               >
+                <Box
+                  sx={{
+                    backgroundColor: type === "Patient" ? "#e91e63" : "#3f51b5", // pink for Patient, blue for Hospital
+                    borderRadius: 2,
+                    px: 2,
+                    py: 1,
+                    display: "inline-block",
+                    width: "100%",
+                  }}
+                >
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "white",
+                      fontWeight: "bold",
+                      fontSize: "1.2rem",
+                    }}
+                  >
+                    {type} Requests
+                  </Typography>
+                </Box>
                 <CardContent sx={{ px: 3, pt: 3, pb: 1 }}>
                   <Box
                     display="flex"
                     flexDirection="column"
                     gap={1}
                     sx={{
-                      background: "#fff5f5",
+                      background: "white", // or your desired background
                       borderRadius: 3,
                       p: 2,
-                      boxShadow: "inset 0 0 5px rgba(255,0,0,0.2)",
+                      borderWidth: "3px", // ✅ border thickness
+                      borderStyle: "solid", // ✅ required to show width
+                      borderColor: "rgba(152, 0, 234, 0.6)", // ✅ purple border
+                      boxShadow: "inset 0 0 5px rgba(230, 255, 5, 0.2)", // yellow glow inside
                     }}
                   >
                     <Box display="flex" alignItems="center" gap={1}>
@@ -286,34 +349,91 @@ const BloodRequestBoard = () => {
                       <Typography>{request.requestDate}</Typography>
                     </Box>
 
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <LocationOn fontSize="small" color="info" />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        Location:
-                      </Typography>
-                      <Typography>{request.location}</Typography>
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                    >
+                      {/* Location Info */}
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <LocationOn fontSize="small" color="info" />
+                        <Typography fontWeight="bold" variant="subtitle1">
+                          Location:
+                        </Typography>
+                        <Typography>{request.location}</Typography>
+                      </Box>
+
+                      {/* Edit + Delete Icons */}
+                      <Box display="flex" gap={1}>
+                        <Tooltip title="Edit">
+                          <IconButton
+                            onClick={() => handleEdit(request)}
+                            sx={{
+                              backgroundColor: "#4CAF50",
+                              color: "#fff",
+                              borderRadius: 2,
+                              "&:hover": {
+                                backgroundColor: "#45a049",
+                              },
+                            }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+
+                        <Tooltip title="Delete">
+                          <IconButton
+                            onClick={() => setDeleteTarget(request)}
+                            sx={{
+                              backgroundColor: "#f44336",
+                              color: "#fff",
+                              borderRadius: 2,
+                              "&:hover": {
+                                backgroundColor: "#d32f2f",
+                              },
+                            }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </Box>
                   </Box>
                 </CardContent>
 
-                <CardActions sx={{ justifyContent: "flex-end", px: 2 }}>
+                {/* <CardActions sx={{ justifyContent: "flex-end", px: 2, gap: 1 }}>
                   <Tooltip title="Edit">
                     <IconButton
-                      color="primary"
                       onClick={() => handleEdit(request)}
+                      sx={{
+                        backgroundColor: "#4CAF50",
+                        color: "#fff",
+                        borderRadius: 2,
+                        "&:hover": {
+                          backgroundColor: "#45a049",
+                        },
+                      }}
                     >
                       <EditIcon />
                     </IconButton>
                   </Tooltip>
+
                   <Tooltip title="Delete">
                     <IconButton
-                      color="error"
                       onClick={() => setDeleteTarget(request)}
+                      sx={{
+                        backgroundColor: "#f44336",
+                        color: "#fff",
+                        borderRadius: 2,
+                        "&:hover": {
+                          backgroundColor: "#d32f2f",
+                        },
+                      }}
                     >
                       <DeleteIcon />
                     </IconButton>
                   </Tooltip>
-                </CardActions>
+                </CardActions> */}
               </Card>
             ))}
           </Grid>
