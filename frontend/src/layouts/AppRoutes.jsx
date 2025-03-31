@@ -3,9 +3,11 @@ import { Routes, Route } from "react-router-dom";
 import Sidebar from "./Menu/Sidebar";
 import Header from "./Header/Header";
 import Dashboard from "../pages/Dashboard";
-import BloodRequestTable from "../pages/BloodRequest/ReadBloodRequest";
+import Donor from "../pages/Donor";
+import BloodRequest from "../pages/BloodRequest";
 import { Box } from "@mui/material";
 import { appColors } from "../theme/appColors";
+import BloodInventary from "../pages/BloodInventary/index";
 
 const AppRoutes = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(true);
@@ -32,10 +34,10 @@ const AppRoutes = () => {
         <Header toggleSidebar={() => setSidebarOpen(!isSidebarOpen)} />
         <Routes>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/donor" element={<BloodRequestTable />} />
-          <Route path="/blood-bank" element={<BloodRequestTable />} />
-          <Route path="/blood-request" element={<BloodRequestTable />} />
-          <Route path="/event-campaign" element={<BloodRequestTable />} />
+          <Route path="/donor" element={<Donor />} />
+          <Route path="/blood-bank" element={<BloodInventary />} />
+          <Route path="/blood-request" element={<BloodRequest />} />
+          <Route path="/event-campaign" element={<Dashboard />} />
         </Routes>
       </Box>
     </Box>

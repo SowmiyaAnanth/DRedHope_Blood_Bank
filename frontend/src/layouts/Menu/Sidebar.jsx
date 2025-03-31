@@ -24,6 +24,8 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { appColors } from "../../theme/appColors";
+import men from '../../assets/images/men.jpg';
+
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const navigate = useNavigate();
@@ -48,7 +50,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         "& .MuiDrawer-paper": {
           width: isOpen ? 300 : 60,
           transition: "width 0.3s",
-          bgcolor: "darkred",
+          bgcolor: "#A31D1D",
           color: "#FEF9E1",
         },
       }}
@@ -65,12 +67,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Profile Section */}
       {isOpen && (
         <Box display="flex" flexDirection="column" alignItems="center" my={2}>
-          <Avatar sx={{ width: 80, height: 80, mb: 2 }} src="/profile.jpg" />
+          <Avatar sx={{ width: 80, height: 80, mb: 2 }} src={men} /> 
           <Typography variant="h6" fontWeight="bold">
-            John Doe
+            Thisoharin
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            johndoe@email.com
+            harin12@email.com
           </Typography>
         </Box>
       )}
@@ -87,7 +89,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
               py: 2,
               justifyContent: isOpen ? "flex-start" : "center",
               px: isOpen ? 3 : 5,
-              bgcolor: hoveredIndex === index ? "#FFF5E1" : "transparent", 
+              bgcolor: hoveredIndex === index ? "#FFF5E1" : "transparent",
               color:
                 hoveredIndex === index
                   ? appColors.darkRed[100]
