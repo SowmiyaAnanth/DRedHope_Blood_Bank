@@ -18,7 +18,7 @@ const Header = ({ toggleSidebar }) => {
   };
 
   return (
-    <AppBar position="fixed" sx={{ bgcolor: "darkred", color: "white" }}>
+    <AppBar position="fixed" sx={{ bgcolor: "#A31D1D", color: "white" }}>
       <Toolbar>
         <IconButton
           edge="start"
