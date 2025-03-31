@@ -14,7 +14,6 @@ import {
   MenuItem,
   InputAdornment,
   Grid,
-  Paper,
 } from "@mui/material";
 import PhoneInput from "react-phone-input-2";
 import "react-phone-input-2/lib/style.css";
@@ -30,7 +29,6 @@ export default function Donor() {
   const [error, setError] = useState("");
   const [phoneError, setPhoneError] = useState("");
   const [nameError, setNameError] = useState("");
-  const [filterGroup, setFilterGroup] = useState("");
 
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -57,6 +55,7 @@ export default function Donor() {
     image: "",
   });
 
+  // Load Merriweather font
   useEffect(() => {
     const link = document.createElement("link");
     link.href =
@@ -160,7 +159,9 @@ export default function Donor() {
       });
     }
 
-    localStorage.setItem("donors", JSON.stringify(updatedDonors));
+    const lightweightDonors = updatedDonors.map(({ image, ...rest }) => rest);
+    localStorage.setItem("donors", JSON.stringify(lightweightDonors));
+
     setDonors(updatedDonors);
     setMessage(
       formData.id ? "Donor updated successfully!" : "Donor added successfully!"
@@ -207,58 +208,19 @@ export default function Donor() {
     setView("edit");
   };
 
-  const filteredDonors = filterGroup
-    ? donors.filter((d) => d.bloodGroup === filterGroup)
-    : donors;
-
   if (view === "list") {
     return (
       <Box mt={3}>
-        <Box
-          display="flex"
-          justifyContent="space-between"
-          alignItems="center"
-          px={2}
-          mb={2}
-        >
-          <Paper elevation={3} sx={{ padding: 2, backgroundColor: "#e3f2fd" }}>
-            <Typography variant="h6" fontWeight="bold">
-              Total Donors: {filteredDonors.length}
-            </Typography>
-          </Paper>
-          <Box display="flex" gap={2} alignItems="center">
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <InputLabel>Blood Group</InputLabel>
-              <Select
-                value={filterGroup}
-                onChange={(e) => setFilterGroup(e.target.value)}
-                label="Blood Group"
-              >
-                <MenuItem value="">All</MenuItem>
-                {bloodGroups.map((group) => (
-                  <MenuItem key={group} value={group}>
-                    {group}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => setFilterGroup("")}
-            >
-              Clear Filter
-            </Button>
-          </Box>
-        </Box>
-
-        {filteredDonors.length === 0 ? (
+        <Typography variant="h5" align="center">
+          Donor List
+        </Typography>
+        {donors.length === 0 ? (
           <Typography align="center" mt={2}>
             No donors found.
           </Typography>
         ) : (
           <Grid container spacing={2} mt={2}>
-            {filteredDonors.map((donor) => (
+            {donors.map((donor) => (
               <Grid item xs={12} sm={6} md={4} key={donor.id}>
                 <Box
                   sx={{
@@ -279,6 +241,7 @@ export default function Donor() {
                       transformStyle: "preserve-3d",
                     }}
                   >
+                    {/* FRONT SIDE */}
                     <Card
                       sx={{
                         position: "absolute",
@@ -306,6 +269,7 @@ export default function Donor() {
                       </CardContent>
                     </Card>
 
+                    {/* BACK SIDE */}
                     <Card
                       sx={{
                         position: "absolute",
@@ -322,9 +286,7 @@ export default function Donor() {
                           fontFamily: "Merriweather, serif",
                         }}
                       >
-                        <Typography fontWeight="bold">
-                          {donor.fullName}
-                        </Typography>
+                        <Typography fontWeight="bold">{donor.fullName}</Typography>
                         <Typography>Blood Group: {donor.bloodGroup}</Typography>
                         <Typography>City: {donor.city}</Typography>
                         <Typography>
@@ -356,7 +318,6 @@ export default function Donor() {
             ))}
           </Grid>
         )}
-
         <Box mt={3} textAlign="center">
           <Button
             variant="contained"
@@ -620,7 +581,11 @@ export default function Donor() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmit} variant="contained" color="primary">
+            <Button
+              onClick={handleSubmit}
+              variant="contained"
+              color="primary"
+            >
               {formData.id ? "Update" : "Submit"}
             </Button>
           </Box>
