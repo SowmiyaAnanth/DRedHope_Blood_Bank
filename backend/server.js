@@ -4,10 +4,10 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 
 // Import all route files
-const donorRoutes = require("./Routes/donorRoutes");
+// const donorRoutes = require("./Routes/donorRoutes");
 const bloodInventoryRoutes = require("./Routes/bloodInventoryRoutes");
-const eventRoutes = require("./Routes/eventRoutes");
-const requestRoutes = require("./Routes/requestRoutes");
+// const eventRoutes = require("./Routes/eventRoutes");
+// const requestRoutes = require("./Routes/requestRoutes");
 
 // Initialize config and app
 dotenv.config();
@@ -27,10 +27,10 @@ mongoose
   .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // Routes
-app.use("/api/donors", donorRoutes);
+// app.use("/api/donors", donorRoutes);
 app.use("/api/blood-inventory", bloodInventoryRoutes);
-app.use("/api/events", eventRoutes);
-app.use("/api/blood-requests", requestRoutes);
+// app.use("/api/events", eventRoutes);
+// app.use("/api/blood-requests", requestRoutes);
 
 // Start the server
 const PORT = process.env.PORT || 5000;
