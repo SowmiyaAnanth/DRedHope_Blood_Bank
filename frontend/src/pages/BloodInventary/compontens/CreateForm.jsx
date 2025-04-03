@@ -107,10 +107,8 @@ const BloodInventoryForm = ({ open, onClose, onSuccess, defaultValues }) => {
                 </FormLabel>
                 <RadioGroup
                   row
-                  {...register("bloodGroup", {
-                    required: "Blood group is required",
-                  })}
                   value={watch("bloodGroup") || ""}
+                  onChange={(e) => setValue("bloodGroup", e.target.value)}
                 >
                   <Grid container>
                     {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
