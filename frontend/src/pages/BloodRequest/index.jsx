@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
@@ -26,38 +26,45 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BloodtypeIcon from "@mui/icons-material/Bloodtype";
 import { Person, Numbers, Event, LocationOn } from "@mui/icons-material";
 import { CardActions, Tooltip } from "@mui/material";
+import {
+  getAllRequests,
+  createRequest,
+  updateRequest,
+  deleteRequest,
+} from "../../api/bloodRequestAPI";
 
-const mockBloodRequests = [
-  {
-    id: 1,
-    requesterName: "Banu Sundar",
-    requesterType: "Patient",
-    patientOrHospitalId: "P12345",
-    bloodGroup: ["A+"],
-    quantity: 2,
-    reason: "Surgery",
-    emergencyLevel: "Emergency",
-    requestDate: "2025-03-12",
-    requestedBy: "Dr. Smith",
-    location: "City Hospital",
-  },
-  {
-    id: 2,
-    requesterName: "Sowmi Ananth",
-    requesterType: "Hospital",
-    patientOrHospitalId: "H56789",
-    bloodGroup: ["O-"],
-    quantity: 5,
-    reason: "Emergency Stock",
-    emergencyLevel: "Normal",
-    requestDate: "2025-03-12",
-    requestedBy: "Admin Staff",
-    location: "City Blood Bank",
-  },
-];
+// const mockBloodRequests = [
+//   {
+//     id: 1,
+//     requesterName: "Banu Sundar",
+//     requesterType: "Patient",
+//     patientOrHospitalId: "P12345",
+//     bloodGroup: ["A+"],
+//     quantity: 2,
+//     reason: "Surgery",
+//     emergencyLevel: "Emergency",
+//     requestDate: "2025-03-12",
+//     requestedBy: "Dr. Smith",
+//     location: "City Hospital",
+//   },
+//   {
+//     id: 2,
+//     requesterName: "Sowmi Ananth",
+//     requesterType: "Hospital",
+//     patientOrHospitalId: "H56789",
+//     bloodGroup: ["O-"],
+//     quantity: 5,
+//     reason: "Emergency Stock",
+//     emergencyLevel: "Normal",
+//     requestDate: "2025-03-12",
+//     requestedBy: "Admin Staff",
+//     location: "City Blood Bank",
+//   },
+// ];
 
 const BloodRequestBoard = () => {
-  const [bloodRequests, setBloodRequests] = useState(mockBloodRequests);
+  const [bloodRequests, setBloodRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [openForm, setOpenForm] = useState(false);
   const [editData, setEditData] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -66,21 +73,35 @@ const BloodRequestBoard = () => {
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
   const emergencyLevels = ["Normal", "Emergency"];
 
-  const handleAddOrUpdate = (formData) => {
-    if (editData) {
-      setBloodRequests((prev) =>
-        prev.map((req) =>
-          req.id === editData.id ? { ...formData, id: editData.id } : req
-        )
-      );
-    } else {
-      const newId = bloodRequests.length
-        ? Math.max(...bloodRequests.map((r) => r.id)) + 1
-        : 1;
-      setBloodRequests((prev) => [...prev, { ...formData, id: newId }]);
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const res = await getAllRequests();
+      setBloodRequests(res.data);
+    } catch (error) {
+      console.error("Failed to fetch blood requests", error);
+    } finally {
+      setLoading(false);
     }
-    setOpenForm(false);
-    setEditData(null);
+  };
+
+  const handleAddOrUpdate = async (formData) => {
+    try {
+      if (editData) {
+        await updateRequest(editData._id, formData);
+      } else {
+        await createRequest(formData);
+      }
+      fetchRequests();
+      setOpenForm(false);
+      setEditData(null);
+    } catch (error) {
+      console.error("Failed to save request", error);
+    }
   };
 
   const handleEdit = (request) => {
@@ -88,11 +109,14 @@ const BloodRequestBoard = () => {
     setOpenForm(true);
   };
 
-  const confirmDelete = () => {
-    setBloodRequests((prev) =>
-      prev.filter((request) => request.id !== deleteTarget.id)
-    );
-    setDeleteTarget(null);
+  const confirmDelete = async () => {
+    try {
+      await deleteRequest(deleteTarget._id);
+      fetchRequests();
+      setDeleteTarget(null);
+    } catch (error) {
+      console.error("Delete failed", error);
+    }
   };
 
   const handleDownloadPDF = () => {
@@ -245,7 +269,7 @@ const BloodRequestBoard = () => {
           <Grid item xs={12} md={6} key={type}>
             {groupedRequests[type].map((request) => (
               <Card
-                key={request.id}
+                key={request._id}
                 sx={{
                   mb: 3, // ✅ adds vertical space between cards (like a "row gap")
                   borderRadius: 4,
