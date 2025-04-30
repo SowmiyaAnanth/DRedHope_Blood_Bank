@@ -25,7 +25,6 @@ const BloodInventoryTable = () => {
       {/* Enhanced Stats Cards with Icons and Animations */}
 
       {/* Chart Components */}
-      
 
       {/* Donation Impact Section */}
       <Box sx={{ maxWidth: "1200px", width: "100%", mt: 4 }}>
@@ -39,7 +38,6 @@ const BloodInventoryTable = () => {
           }}
         >
           <Box sx={{ p: 3 }}>
-           
             <EnhancedBloodDonationImpact units={25} />
           </Box>
         </Paper>
@@ -66,7 +64,9 @@ const BloodInventoryTable = () => {
                   color: "white",
                 }}
               >
-               
+                <Typography variant="h6" fontWeight="bold" align="center">
+                  Real-Time Blood
+                </Typography>
               </Box>
               <Box sx={{ p: 2 }}>
                 <TestTube />
