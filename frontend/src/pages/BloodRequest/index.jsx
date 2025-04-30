@@ -13,7 +13,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import EditIcon from "@mui/icons-material/Edit";
+import EditNoteIcon from "@mui/icons-material/EditNote"; // Changed to different edit icon
 import DeleteIcon from "@mui/icons-material/Delete";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
@@ -38,21 +38,23 @@ import {
 } from "../../api/bloodRequestAPI";
 
 // Custom styled components for blood bag
-const TopConnector = styled(Box)(({ theme }) => ({
+const TopConnector = styled(Box)(({ theme, requesterType }) => ({
   width: 64,
   height: 24,
   borderRadius: "8px 8px 0 0",
-  backgroundColor: theme.palette.grey[300],
-  border: `2px solid ${theme.palette.grey[400]}`,
+  // Changed colors based on request type
+  backgroundColor: requesterType === "Patient" ? "#3f51b5" : "#e91e63",
+  border: `2px solid ${requesterType === "Patient" ? "#303f9f" : "#c2185b"}`,
   margin: "0 auto",
 }));
 
-const Tube = styled(Box)(({ theme }) => ({
+const Tube = styled(Box)(({ theme, requesterType }) => ({
   width: 16,
   height: 64,
-  backgroundColor: theme.palette.grey[200],
-  borderLeft: `2px solid ${theme.palette.grey[400]}`,
-  borderRight: `2px solid ${theme.palette.grey[400]}`,
+  // Changed colors based on request type
+  backgroundColor: requesterType === "Patient" ? "#7986cb" : "#f06292",
+  borderLeft: `2px solid ${requesterType === "Patient" ? "#303f9f" : "#c2185b"}`,
+  borderRight: `2px solid ${requesterType === "Patient" ? "#303f9f" : "#c2185b"}`,
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -62,31 +64,33 @@ const Tube = styled(Box)(({ theme }) => ({
   position: "relative",
 }));
 
-const BottomConnector = styled(Box)(({ theme }) => ({
+const BottomConnector = styled(Box)(({ theme, requesterType }) => ({
   width: 32,
   height: 16,
   borderRadius: "0 0 8px 8px",
-  backgroundColor: theme.palette.grey[300],
-  border: `2px solid ${theme.palette.grey[400]}`,
+  // Changed colors based on request type
+  backgroundColor: requesterType === "Patient" ? "#3f51b5" : "#e91e63",
+  border: `2px solid ${requesterType === "Patient" ? "#303f9f" : "#c2185b"}`,
   borderTop: 0,
   margin: "0 auto",
 }));
 
-const ActionButton = styled(IconButton)(({ theme, color }) => ({
-  minWidth: 24,
-  width: 24,
-  height: 24,
-  borderRadius: "50%",
-  padding: 0,
+// Changed from circle to rectangle with radius
+const ActionButton = styled(Button)(({ theme, color }) => ({
+  minWidth: 28,
+  height: 20,
+  borderRadius: 4,
+  padding: "0 4px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   backgroundColor:
-    color === "primary" ? theme.palette.primary.main : theme.palette.error.main,
+    color === "edit" ? theme.palette.success.main : theme.palette.error.light,
   color: theme.palette.common.white,
   "&:hover": {
     backgroundColor:
-      color === "primary"
-        ? theme.palette.primary.dark
-        : theme.palette.error.dark,
-    transform: "scale(1.1)",
+      color === "edit" ? theme.palette.success.dark : theme.palette.error.dark,
+    transform: "scale(1.05)",
   },
   transition: "all 0.3s",
 }));
@@ -129,6 +133,24 @@ const AlertBadge = styled(Box)(({ theme }) => ({
   animation: "pulse 2s infinite",
 }));
 
+// Blood Cell for animation
+const BloodCell = styled(Box)(({ size, delay, duration }) => ({
+  position: "absolute",
+  width: size,
+  height: size * 1.3,
+  backgroundColor: "rgba(255, 255, 255, 0.25)",
+  borderRadius: "50%",
+  animation: `float ${duration}s infinite`,
+  animationDelay: `${delay}s`,
+  opacity: 0.4,
+}));
+
+const formatDate = (dateString) => {
+  if (!dateString) return "";
+  // Extract just the date part from the ISO string (YYYY-MM-DD)
+  return dateString.split("T")[0];
+};
+
 const BloodBagCard = ({ request, onEdit, onDelete }) => {
   const theme = useTheme();
   const [isBlinking, setIsBlinking] = useState(false);
@@ -161,19 +183,20 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
       bloodType = bloodType[0]; // Use the first blood type if it's an array
     }
 
-    if (typeof bloodType !== "string") return theme.palette.error.main;
+    if (typeof bloodType !== "string") return "#b71c1c"; // Default dark red
 
+    // Darker blood red colors
     switch (bloodType.charAt(0)) {
       case "A":
-        return theme.palette.error.dark;
+        return "#8b0000"; // Dark red
       case "B":
-        return theme.palette.error.main;
+        return "#a70000"; // Darker red
       case "O":
-        return "#e53935"; // lighter red
+        return "#9b0000"; // Medium dark red
       case "AB":
-        return "#b71c1c"; // darker red
+        return "#800000"; // Very dark red
       default:
-        return theme.palette.error.main;
+        return "#b71c1c"; // Default dark red
     }
   };
 
@@ -223,6 +246,15 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
     return groups || "";
   };
 
+  // Format ID based on requester type
+  const formatId = (id, type) => {
+    if (!id) return "";
+    if (type === "Patient" && !id.startsWith("PT")) {
+      return `PT${id.padStart(3, "0")}`;
+    }
+    return id;
+  };
+
   return (
     <Box
       sx={{
@@ -247,27 +279,29 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
       )}
 
       {/* Blood bag top connector */}
-      <TopConnector />
+      <TopConnector requesterType={request.requesterType} />
 
       {/* Tube area with buttons */}
-      <Tube>
+      <Tube requesterType={request.requesterType}>
         <ActionButton
-          color="primary"
+          color="edit"
           onClick={(e) => {
             e.stopPropagation();
             onEdit(request);
           }}
+          size="small"
         >
-          <EditIcon sx={{ fontSize: 12 }} />
+          <EditNoteIcon sx={{ fontSize: 16 }} />
         </ActionButton>
         <ActionButton
-          color="error"
+          color="delete"
           onClick={(e) => {
             e.stopPropagation();
             onDelete(request);
           }}
+          size="small"
         >
-          <DeleteIcon sx={{ fontSize: 12 }} />
+          <DeleteIcon sx={{ fontSize: 16 }} />
         </ActionButton>
 
         {/* Dripping animation */}
@@ -300,31 +334,21 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
           outline: isExpanded
             ? `2px solid ${theme.palette.primary.light}`
             : "none",
+          display: "flex",
+          flexDirection: "column",
+          height: 240, // Fixed height for all blood bags
         }}
       >
-        {/* Type indicator at top */}
+        {/* Blood bag center white content area - Moved to center */}
         <Box
           sx={{
-            backgroundColor:
-              request.requesterType === "Patient" ? "#e91e63" : "#3f51b5", // pink for Patient, blue for Hospital
-            px: 1.5,
-            py: 0.5,
-            width: "100%",
+            bgcolor: "white",
+            p: 1.5,
+            height: "70%", // Takes 70% of the container
+            zIndex: 2, // Above the blood cells
+            position: "relative",
           }}
         >
-          <Typography
-            variant="subtitle2"
-            sx={{
-              color: "white",
-              fontWeight: "bold",
-            }}
-          >
-            {request.requesterType} Request
-          </Typography>
-        </Box>
-
-        {/* Blood bag label area */}
-        <Box sx={{ bgcolor: "white", p: 1.5 }}>
           <Box
             sx={{
               display: "flex",
@@ -368,10 +392,10 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
           <Box sx={{ "& > div": { mb: 0.5 } }}>
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
               <Typography variant="body2" color="text.secondary">
-                ID:
+                {request.requesterType} ID:
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {request.patientOrHospitalId}
+                {formatId(request.patientOrHospitalId, request.requesterType)}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -387,7 +411,7 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
                 Date:
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {request.requestDate}
+                {formatDate(request.requestDate)}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", justifyContent: "space-between" }}>
@@ -459,39 +483,28 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
           </Box>
         </Box>
 
-        {/* Blood content area */}
+        {/* Dark red blood content area with blood cells */}
         <Box
           sx={{
             bgcolor: getBloodColor(request.bloodGroup),
-            height: isExpanded ? 90 : 60,
+            flexGrow: 1, // Takes the remaining space
             position: "relative",
             overflow: "hidden",
-            transition: "height 0.5s",
           }}
         >
-          {/* Blood ripple animation */}
-          <Box sx={{ position: "absolute", inset: 0, overflow: "hidden" }}>
-            {[...Array(3)].map((_, i) => (
-              <Box
-                key={i}
-                sx={{ position: "absolute", width: "100%", opacity: 0.3 }}
-              >
-                <Box
-                  sx={{
-                    height: 4,
-                    bgcolor: "rgba(255, 255, 255, 0.3)",
-                    borderRadius: 4,
-                    animation: "pulse 2s infinite",
-                    animationDelay: `${i * 0.2}s`,
-                    position: "absolute",
-                    top: i * 8 + 4,
-                    left: `${i * 4}%`,
-                    right: `${i * 4}%`,
-                  }}
-                />
-              </Box>
-            ))}
-          </Box>
+          {/* Blood cells animation */}
+          {[...Array(12)].map((_, i) => (
+            <BloodCell
+              key={i}
+              size={8 + Math.random() * 8}
+              delay={Math.random() * 5}
+              duration={4 + Math.random() * 6}
+              sx={{
+                left: `${Math.random() * 80 + 10}%`,
+                top: `${Math.random() * 80 + 10}%`,
+              }}
+            />
+          ))}
 
           {/* Emergency indicator */}
           {request.emergencyLevel === "Emergency" && (
@@ -518,32 +531,11 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
               </Box>
             </Box>
           )}
-
-          {/* Blood bubbles animation */}
-          <Box sx={{ position: "absolute", inset: 0 }}>
-            {[...Array(6)].map((_, i) => (
-              <Box
-                key={i}
-                sx={{
-                  position: "absolute",
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  bgcolor: "rgba(255, 255, 255, 0.2)",
-                  className: "animate-float",
-                  left: `${Math.random() * 80 + 10}%`,
-                  top: `${Math.random() * 80 + 10}%`,
-                  animationDuration: `${3 + Math.random() * 3}s`,
-                  animationDelay: `${Math.random() * 2}s`,
-                }}
-              />
-            ))}
-          </Box>
         </Box>
       </Paper>
 
       {/* Blood bag bottom connector */}
-      <BottomConnector />
+      <BottomConnector requesterType={request.requesterType} />
     </Box>
   );
 };
@@ -679,7 +671,7 @@ const BloodRequestBoard = () => {
         : req.bloodGroup,
       req.quantity,
       req.emergencyLevel,
-      req.requestDate,
+      formatDate(req.requestDate),
       req.location,
     ]);
 
