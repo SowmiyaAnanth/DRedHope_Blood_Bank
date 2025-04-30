@@ -15,6 +15,7 @@ import ChatIcon from '@mui/icons-material/Chat';
 import CloseIcon from '@mui/icons-material/Close';
 import SmartToyIcon from '@mui/icons-material/SmartToy';
 
+
 const AIChatBox = () => {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState([
