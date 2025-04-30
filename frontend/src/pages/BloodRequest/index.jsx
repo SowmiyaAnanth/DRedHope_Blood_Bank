@@ -29,6 +29,7 @@ import autoTable from "jspdf-autotable";
 import BloodRequestForm from "./components/CreateRequestForm";
 import BloodRequestButton from "./Styles/CreateButton";
 import MagicMotionButton from "./Styles/MagicMotionButton";
+import BloodRequestFilter from "./Styles/BloodRequestFilter";
 import deleteIcon from "../../assets/images/delete.jpg";
 import {
   getAllRequests,
@@ -727,7 +728,7 @@ const BloodRequestBoard = () => {
 
       <Grid container justifyContent="space-between" alignItems="center" mb={3}>
         <BloodRequestButton onClick={() => setOpenForm(true)} />
-        <Stack
+        {/* <Stack
           direction="row"
           spacing={2}
           sx={{
@@ -813,8 +814,17 @@ const BloodRequestBoard = () => {
               <Typography color="green">Normal</Typography>
             </MenuItem>
           </TextField>
-        </Stack>
+        </Stack> */}
+
+          {/* New Filter Component */}
+        <BloodRequestFilter
+          filter={filter}
+          setFilter={setFilter}
+          bloodGroups={bloodGroups}
+        />
       </Grid>
+
+
 
       {/* Audio for emergency alert */}
       {playSound && (
