@@ -2,8 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Box,
   Grid,
-  Card,
-  CardContent,
   Typography,
   IconButton,
   Dialog,
@@ -11,21 +9,27 @@ import {
   TextField,
   MenuItem,
   Stack,
-  Chip,
+  Paper,
+  useTheme,
 } from "@mui/material";
+import { styled } from "@mui/material/styles";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import BloodRequestForm from "./components/CreateRequestForm";
-import BloodRequestButton from "./Styles/CreateButton";
-import MagicMotionButton from "./Styles/MagicMotionButton";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import deleteIcon from "../../assets/images/delete.jpg";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import BloodtypeIcon from "@mui/icons-material/Bloodtype";
+import OpacityIcon from "@mui/icons-material/Opacity";
+import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import CheckIcon from "@mui/icons-material/Check";
+import CloseIcon from "@mui/icons-material/Close";
+import LocalHospitalIcon from "@mui/icons-material/LocalHospital";
 import { Person, Numbers, Event, LocationOn } from "@mui/icons-material";
-import { CardActions, Tooltip } from "@mui/material";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import BloodRequestForm from "./components/CreateRequestForm";
+import BloodRequestButton from "./Styles/CreateButton";
+import MagicMotionButton from "./Styles/MagicMotionButton";
+import deleteIcon from "../../assets/images/delete.jpg";
 import {
   getAllRequests,
   createRequest,
@@ -33,49 +37,580 @@ import {
   deleteRequest,
 } from "../../api/bloodRequestAPI";
 
-// const mockBloodRequests = [
-//   {
-//     id: 1,
-//     requesterName: "Banu Sundar",
-//     requesterType: "Patient",
-//     patientOrHospitalId: "P12345",
-//     bloodGroup: ["A+"],
-//     quantity: 2,
-//     reason: "Surgery",
-//     emergencyLevel: "Emergency",
-//     requestDate: "2025-03-12",
-//     requestedBy: "Dr. Smith",
-//     location: "City Hospital",
-//   },
-//   {
-//     id: 2,
-//     requesterName: "Sowmi Ananth",
-//     requesterType: "Hospital",
-//     patientOrHospitalId: "H56789",
-//     bloodGroup: ["O-"],
-//     quantity: 5,
-//     reason: "Emergency Stock",
-//     emergencyLevel: "Normal",
-//     requestDate: "2025-03-12",
-//     requestedBy: "Admin Staff",
-//     location: "City Blood Bank",
-//   },
-// ];
+// Custom styled components for blood bag
+const TopConnector = styled(Box)(({ theme }) => ({
+  width: 64,
+  height: 24,
+  borderRadius: "8px 8px 0 0",
+  backgroundColor: theme.palette.grey[300],
+  border: `2px solid ${theme.palette.grey[400]}`,
+  margin: "0 auto",
+}));
+
+const Tube = styled(Box)(({ theme }) => ({
+  width: 16,
+  height: 64,
+  backgroundColor: theme.palette.grey[200],
+  borderLeft: `2px solid ${theme.palette.grey[400]}`,
+  borderRight: `2px solid ${theme.palette.grey[400]}`,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "4px 0",
+  margin: "0 auto",
+  position: "relative",
+}));
+
+const BottomConnector = styled(Box)(({ theme }) => ({
+  width: 32,
+  height: 16,
+  borderRadius: "0 0 8px 8px",
+  backgroundColor: theme.palette.grey[300],
+  border: `2px solid ${theme.palette.grey[400]}`,
+  borderTop: 0,
+  margin: "0 auto",
+}));
+
+const ActionButton = styled(IconButton)(({ theme, color }) => ({
+  minWidth: 24,
+  width: 24,
+  height: 24,
+  borderRadius: "50%",
+  padding: 0,
+  backgroundColor:
+    color === "primary" ? theme.palette.primary.main : theme.palette.error.main,
+  color: theme.palette.common.white,
+  "&:hover": {
+    backgroundColor:
+      color === "primary"
+        ? theme.palette.primary.dark
+        : theme.palette.error.dark,
+    transform: "scale(1.1)",
+  },
+  transition: "all 0.3s",
+}));
+
+const BloodDrop = styled(Box)(({ theme, color }) => ({
+  width: 8,
+  height: 8,
+  borderRadius: "50%",
+  backgroundColor: color,
+  animation: "bounce 1s infinite",
+}));
+
+const EmergencySiren = styled(Box)(({ theme, blinking }) => ({
+  position: "absolute",
+  top: -32,
+  left: "50%",
+  transform: "translateX(-50%)",
+  zIndex: 10,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 4,
+  borderRadius: "50%",
+  backgroundColor: blinking
+    ? theme.palette.error.main
+    : theme.palette.common.white,
+  color: blinking ? theme.palette.common.white : theme.palette.error.main,
+}));
+
+const AlertBadge = styled(Box)(({ theme }) => ({
+  position: "fixed",
+  top: 16,
+  right: 16,
+  backgroundColor: theme.palette.error.main,
+  color: theme.palette.common.white,
+  padding: "8px 16px",
+  borderRadius: 24,
+  display: "flex",
+  alignItems: "center",
+  animation: "pulse 2s infinite",
+}));
+
+const BloodBagCard = ({ request, onEdit, onDelete }) => {
+  const theme = useTheme();
+  const [isBlinking, setIsBlinking] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [dripping, setDripping] = useState(false);
+
+  // Set up blinking effect for emergency requests
+  useEffect(() => {
+    if (request.emergencyLevel === "Emergency") {
+      const interval = setInterval(() => {
+        setIsBlinking((prev) => !prev);
+      }, 500);
+
+      return () => clearInterval(interval);
+    }
+  }, [request.emergencyLevel]);
+
+  // Start dripping animation on hover
+  useEffect(() => {
+    if (isExpanded) {
+      setDripping(true);
+      const timeout = setTimeout(() => setDripping(false), 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [isExpanded]);
+
+  // Define blood bag color based on blood type
+  const getBloodColor = (bloodType) => {
+    if (Array.isArray(bloodType) && bloodType.length > 0) {
+      bloodType = bloodType[0]; // Use the first blood type if it's an array
+    }
+
+    if (typeof bloodType !== "string") return theme.palette.error.main;
+
+    switch (bloodType.charAt(0)) {
+      case "A":
+        return theme.palette.error.dark;
+      case "B":
+        return theme.palette.error.main;
+      case "O":
+        return "#e53935"; // lighter red
+      case "AB":
+        return "#b71c1c"; // darker red
+      default:
+        return theme.palette.error.main;
+    }
+  };
+
+  // Status properties based on emergency level
+  const getStatusInfo = (status) => {
+    switch (status) {
+      case "Emergency":
+        return {
+          color: theme.palette.error.main,
+          bgColor: theme.palette.error.light,
+          icon: (
+            <WarningAmberIcon
+              sx={{ fontSize: 16, mr: 0.5, color: theme.palette.error.main }}
+            />
+          ),
+        };
+      case "Normal":
+        return {
+          color: theme.palette.success.main,
+          bgColor: theme.palette.success.light,
+          icon: (
+            <CheckCircleIcon
+              sx={{ fontSize: 16, mr: 0.5, color: theme.palette.success.main }}
+            />
+          ),
+        };
+      default:
+        return {
+          color: theme.palette.grey[500],
+          bgColor: theme.palette.grey[100],
+          icon: (
+            <CloseIcon
+              sx={{ fontSize: 16, mr: 0.5, color: theme.palette.grey[500] }}
+            />
+          ),
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo(request.emergencyLevel);
+
+  // Format blood groups for display
+  const formatBloodGroups = (groups) => {
+    if (Array.isArray(groups)) {
+      return groups.join(", ");
+    }
+    return groups || "";
+  };
+
+  return (
+    <Box
+      sx={{
+        position: "relative",
+        width: 256,
+        margin: "24px auto",
+        transform: isExpanded ? "scale(1.05)" : "scale(1)",
+        transition: "all 0.3s",
+        boxShadow:
+          request.emergencyLevel === "Emergency" && isBlinking
+            ? "0 0 15px 5px rgba(244, 67, 54, 0.5)"
+            : "none",
+        cursor: "pointer",
+      }}
+      onClick={() => setIsExpanded(!isExpanded)}
+    >
+      {/* Emergency siren */}
+      {request.emergencyLevel === "Emergency" && (
+        <EmergencySiren blinking={isBlinking}>
+          <LocalHospitalIcon sx={{ fontSize: 20 }} />
+        </EmergencySiren>
+      )}
+
+      {/* Blood bag top connector */}
+      <TopConnector />
+
+      {/* Tube area with buttons */}
+      <Tube>
+        <ActionButton
+          color="primary"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(request);
+          }}
+        >
+          <EditIcon sx={{ fontSize: 12 }} />
+        </ActionButton>
+        <ActionButton
+          color="error"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(request);
+          }}
+        >
+          <DeleteIcon sx={{ fontSize: 12 }} />
+        </ActionButton>
+
+        {/* Dripping animation */}
+        {dripping && (
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: -8,
+              left: "50%",
+              transform: "translateX(-50%)",
+            }}
+          >
+            <BloodDrop color={getBloodColor(request.bloodGroup)} />
+          </Box>
+        )}
+      </Tube>
+
+      {/* Blood bag main container */}
+      <Paper
+        elevation={0}
+        sx={{
+          borderRadius: 2,
+          border: `2px solid ${
+            request.emergencyLevel === "Emergency"
+              ? theme.palette.error.main
+              : theme.palette.grey[400]
+          }`,
+          overflow: "hidden",
+          transition: "all 0.3s",
+          outline: isExpanded
+            ? `2px solid ${theme.palette.primary.light}`
+            : "none",
+        }}
+      >
+        {/* Type indicator at top */}
+        <Box
+          sx={{
+            backgroundColor:
+              request.requesterType === "Patient" ? "#e91e63" : "#3f51b5", // pink for Patient, blue for Hospital
+            px: 1.5,
+            py: 0.5,
+            width: "100%",
+          }}
+        >
+          <Typography
+            variant="subtitle2"
+            sx={{
+              color: "white",
+              fontWeight: "bold",
+            }}
+          >
+            {request.requesterType} Request
+          </Typography>
+        </Box>
+
+        {/* Blood bag label area */}
+        <Box sx={{ bgcolor: "white", p: 1.5 }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: 1,
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+              {request.requesterName}
+            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                bgcolor: getBloodColor(request.bloodGroup),
+                color: "white",
+                px: 1,
+                py: 0.5,
+                borderRadius: 10,
+                transform: "scale(1)",
+                "&:hover": {
+                  transform: "scale(1.05)",
+                },
+                transition: "transform 0.3s",
+              }}
+            >
+              <OpacityIcon
+                sx={{
+                  mr: 0.5,
+                  fontSize: 14,
+                  animation: "pulse 2s infinite",
+                }}
+              />
+              <Typography variant="body2" sx={{ fontWeight: "bold" }}>
+                {formatBloodGroups(request.bloodGroup)}
+              </Typography>
+            </Box>
+          </Box>
+
+          <Box sx={{ "& > div": { mb: 0.5 } }}>
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography variant="body2" color="text.secondary">
+                ID:
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {request.patientOrHospitalId}
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography variant="body2" color="text.secondary">
+                Quantity:
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {request.quantity} Unit(s)
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography variant="body2" color="text.secondary">
+                Date:
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {request.requestDate}
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
+              <Typography variant="body2" color="text.secondary">
+                Location:
+              </Typography>
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {request.location}
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Emergency:
+              </Typography>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  bgcolor: statusInfo.bgColor,
+                  color: statusInfo.color,
+                  px: 1,
+                  py: 0.25,
+                  borderRadius: 10,
+                }}
+              >
+                {statusInfo.icon}
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {request.emergencyLevel}
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Expanded details */}
+            {isExpanded && (
+              <Box
+                sx={{
+                  mt: 1,
+                  pt: 1,
+                  borderTop: `1px solid ${theme.palette.grey[200]}`,
+                  className: "animate-fadeIn",
+                }}
+              >
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ fontWeight: 500 }}
+                >
+                  Reason:
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: "italic" }}>
+                  {request.reason}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5, fontWeight: 500 }}
+                >
+                  Requested By:
+                </Typography>
+                <Typography variant="body2">{request.requestedBy}</Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
+
+        {/* Blood content area */}
+        <Box
+          sx={{
+            bgcolor: getBloodColor(request.bloodGroup),
+            height: isExpanded ? 90 : 60,
+            position: "relative",
+            overflow: "hidden",
+            transition: "height 0.5s",
+          }}
+        >
+          {/* Blood ripple animation */}
+          <Box sx={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+            {[...Array(3)].map((_, i) => (
+              <Box
+                key={i}
+                sx={{ position: "absolute", width: "100%", opacity: 0.3 }}
+              >
+                <Box
+                  sx={{
+                    height: 4,
+                    bgcolor: "rgba(255, 255, 255, 0.3)",
+                    borderRadius: 4,
+                    animation: "pulse 2s infinite",
+                    animationDelay: `${i * 0.2}s`,
+                    position: "absolute",
+                    top: i * 8 + 4,
+                    left: `${i * 4}%`,
+                    right: `${i * 4}%`,
+                  }}
+                />
+              </Box>
+            ))}
+          </Box>
+
+          {/* Emergency indicator */}
+          {request.emergencyLevel === "Emergency" && (
+            <Box
+              sx={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Box
+                sx={{
+                  bgcolor: "rgba(255, 255, 255, 0.9)",
+                  borderRadius: "50%",
+                  p: 1,
+                  animation: isBlinking ? "pulse 2s infinite" : "none",
+                }}
+              >
+                <WarningAmberIcon
+                  sx={{ fontSize: 24, color: theme.palette.error.main }}
+                />
+              </Box>
+            </Box>
+          )}
+
+          {/* Blood bubbles animation */}
+          <Box sx={{ position: "absolute", inset: 0 }}>
+            {[...Array(6)].map((_, i) => (
+              <Box
+                key={i}
+                sx={{
+                  position: "absolute",
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: "rgba(255, 255, 255, 0.2)",
+                  className: "animate-float",
+                  left: `${Math.random() * 80 + 10}%`,
+                  top: `${Math.random() * 80 + 10}%`,
+                  animationDuration: `${3 + Math.random() * 3}s`,
+                  animationDelay: `${Math.random() * 2}s`,
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+      </Paper>
+
+      {/* Blood bag bottom connector */}
+      <BottomConnector />
+    </Box>
+  );
+};
 
 const BloodRequestBoard = () => {
+  const theme = useTheme();
   const [bloodRequests, setBloodRequests] = useState([]);
   const [loading, setLoading] = useState(false);
   const [openForm, setOpenForm] = useState(false);
   const [editData, setEditData] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [filter, setFilter] = useState({ bloodGroup: "", emergencyLevel: "" });
+  const [playSound, setPlaySound] = useState(false);
 
   const bloodGroups = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
   const emergencyLevels = ["Normal", "Emergency"];
 
+  // Custom animations
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = `
+      @keyframes float {
+        0% { transform: translateY(0); opacity: 0.2; }
+        50% { transform: translateY(-10px); opacity: 0.5; }
+        100% { transform: translateY(-20px); opacity: 0; }
+      }
+      .animate-float {
+        animation: float 4s infinite;
+      }
+      
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .animate-fadeIn {
+        animation: fadeIn 0.3s ease-out forwards;
+      }
+
+      @keyframes bounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+      }
+
+      @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.6; }
+        100% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   useEffect(() => {
     fetchRequests();
   }, []);
+
+  useEffect(() => {
+    // Check if there are any emergency requests
+    const hasEmergency = bloodRequests.some(
+      (item) => item.emergencyLevel === "Emergency"
+    );
+    setPlaySound(hasEmergency);
+  }, [bloodRequests]);
 
   const fetchRequests = async () => {
     try {
@@ -158,27 +693,52 @@ const BloodRequestBoard = () => {
   };
 
   const filteredRequests = bloodRequests.filter((req) => {
-    const bloodGroupMatch =
-      !filter.bloodGroup || req.bloodGroup.includes(filter.bloodGroup);
+    let bloodGroupMatch = true;
+
+    if (filter.bloodGroup) {
+      if (Array.isArray(req.bloodGroup)) {
+        bloodGroupMatch = req.bloodGroup.includes(filter.bloodGroup);
+      } else {
+        bloodGroupMatch = req.bloodGroup === filter.bloodGroup;
+      }
+    }
+
     const emergencyMatch =
       !filter.emergencyLevel || req.emergencyLevel === filter.emergencyLevel;
     return bloodGroupMatch && emergencyMatch;
   });
 
-  const groupedRequests = {
-    Patient: filteredRequests.filter((r) => r.requesterType === "Patient"),
-    Hospital: filteredRequests.filter((r) => r.requesterType === "Hospital"),
-  };
-
   return (
     <Box>
-      <Grid container justifyContent="space-between" alignItems="center" mb={6}>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mb: 3,
+        }}
+      >
+        <OpacityIcon
+          sx={{ mr: 1, fontSize: 24, color: theme.palette.error.main }}
+        />
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: "bold",
+            color: theme.palette.error.main,
+            textAlign: "center",
+          }}
+        >
+          Blood Request Management System
+        </Typography>
+      </Box>
+
+      <Grid container justifyContent="space-between" alignItems="center" mb={3}>
         <BloodRequestButton onClick={() => setOpenForm(true)} />
         <Stack
           direction="row"
           spacing={2}
           sx={{
-            //backgroundColor: "#FFB6B6", // light red
             borderRadius: 2,
             p: 2,
           }}
@@ -264,202 +824,23 @@ const BloodRequestBoard = () => {
         </Stack>
       </Grid>
 
+      {/* Audio for emergency alert */}
+      {playSound && (
+        <AlertBadge className="animate-pulse">
+          <LocalHospitalIcon sx={{ mr: 1, fontSize: 18 }} />
+          <Typography sx={{ fontWeight: 500 }}>Emergency Alert!</Typography>
+        </AlertBadge>
+      )}
+
+      {/* Blood Bag Grid */}
       <Grid container spacing={2}>
-        {["Patient", "Hospital"].map((type) => (
-          <Grid item xs={12} md={6} key={type}>
-            {groupedRequests[type].map((request) => (
-              <Card
-                key={request._id}
-                sx={{
-                  mb: 3, // ✅ adds vertical space between cards (like a "row gap")
-                  borderRadius: 4,
-                  bgcolor: "white",
-                  boxShadow: "0 4px 15px rgba(0,0,0,0.2)",
-                  transition: "transform 0.3s, box-shadow 0.3s",
-                  "&:hover": {
-                    transform: "translateY(-6px)",
-                    boxShadow: "0 6px 25px rgba(152, 0, 234, 0.6)",
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    backgroundColor: type === "Patient" ? "#e91e63" : "#3f51b5", // pink for Patient, blue for Hospital
-                    borderRadius: 2,
-                    px: 2,
-                    py: 1,
-                    display: "inline-block",
-                    width: "100%",
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    sx={{
-                      color: "white",
-                      fontWeight: "bold",
-                      fontSize: "1.2rem",
-                    }}
-                  >
-                    {type} Requests
-                  </Typography>
-                </Box>
-                <CardContent sx={{ px: 3, pt: 3, pb: 1 }}>
-                  <Box
-                    display="flex"
-                    flexDirection="column"
-                    gap={1}
-                    sx={{
-                      background: "white", // or your desired background
-                      borderRadius: 3,
-                      p: 2,
-                      borderWidth: "3px", // ✅ border thickness
-                      borderStyle: "solid", // ✅ required to show width
-                      borderColor: "rgba(152, 0, 234, 0.6)", // ✅ purple border
-                      boxShadow: "inset 0 0 5px rgba(230, 255, 5, 0.2)", // yellow glow inside
-                    }}
-                  >
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Person color="primary" fontSize="small" />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        Name:
-                      </Typography>
-                      <Typography>{request.requesterName}</Typography>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Numbers color="secondary" fontSize="small" />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        ID:
-                      </Typography>
-                      <Typography>{request.patientOrHospitalId}</Typography>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <BloodtypeIcon color="error" fontSize="small" />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        Blood Group:
-                      </Typography>
-                      <Typography>{request.bloodGroup.join(", ")}</Typography>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Numbers fontSize="small" color="warning" />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        Quantity:
-                      </Typography>
-                      <Typography>{request.quantity} Unit(s)</Typography>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <WarningAmberIcon
-                        fontSize="small"
-                        color={
-                          request.emergencyLevel === "Emergency"
-                            ? "error"
-                            : "success"
-                        }
-                      />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        Emergency:
-                      </Typography>
-                      <Typography>{request.emergencyLevel}</Typography>
-                    </Box>
-
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Event fontSize="small" color="secondary" />
-                      <Typography fontWeight="bold" variant="subtitle1">
-                        Request Date:
-                      </Typography>
-                      <Typography>{request.requestDate}</Typography>
-                    </Box>
-
-                    <Box
-                      display="flex"
-                      alignItems="center"
-                      justifyContent="space-between"
-                    >
-                      {/* Location Info */}
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <LocationOn fontSize="small" color="info" />
-                        <Typography fontWeight="bold" variant="subtitle1">
-                          Location:
-                        </Typography>
-                        <Typography>{request.location}</Typography>
-                      </Box>
-
-                      {/* Edit + Delete Icons */}
-                      <Box display="flex" gap={1}>
-                        <Tooltip title="Edit">
-                          <IconButton
-                            onClick={() => handleEdit(request)}
-                            sx={{
-                              backgroundColor: "#4CAF50",
-                              color: "#fff",
-                              borderRadius: 2,
-                              "&:hover": {
-                                backgroundColor: "#45a049",
-                              },
-                            }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Delete">
-                          <IconButton
-                            onClick={() => setDeleteTarget(request)}
-                            sx={{
-                              backgroundColor: "#f44336",
-                              color: "#fff",
-                              borderRadius: 2,
-                              "&:hover": {
-                                backgroundColor: "#d32f2f",
-                              },
-                            }}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-                  </Box>
-                </CardContent>
-
-                {/* <CardActions sx={{ justifyContent: "flex-end", px: 2, gap: 1 }}>
-                  <Tooltip title="Edit">
-                    <IconButton
-                      onClick={() => handleEdit(request)}
-                      sx={{
-                        backgroundColor: "#4CAF50",
-                        color: "#fff",
-                        borderRadius: 2,
-                        "&:hover": {
-                          backgroundColor: "#45a049",
-                        },
-                      }}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                  </Tooltip>
-
-                  <Tooltip title="Delete">
-                    <IconButton
-                      onClick={() => setDeleteTarget(request)}
-                      sx={{
-                        backgroundColor: "#f44336",
-                        color: "#fff",
-                        borderRadius: 2,
-                        "&:hover": {
-                          backgroundColor: "#d32f2f",
-                        },
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Tooltip>
-                </CardActions> */}
-              </Card>
-            ))}
+        {filteredRequests.map((request) => (
+          <Grid item xs={12} sm={6} md={4} lg={3} key={request._id}>
+            <BloodBagCard
+              request={request}
+              onEdit={handleEdit}
+              onDelete={() => setDeleteTarget(request)}
+            />
           </Grid>
         ))}
       </Grid>
