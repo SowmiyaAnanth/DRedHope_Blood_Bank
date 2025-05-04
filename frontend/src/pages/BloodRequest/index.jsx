@@ -415,14 +415,7 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
                 {formatDate(request.requestDate)}
               </Typography>
             </Box>
-            <Box sx={{ display: "flex", justifyContent: "space-between" }}>
-              <Typography variant="body2" color="text.secondary">
-                Location:
-              </Typography>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {request.location}
-              </Typography>
-            </Box>
+           
             <Box
               sx={{
                 display: "flex",
@@ -471,15 +464,7 @@ const BloodBagCard = ({ request, onEdit, onDelete }) => {
                 <Typography variant="body2" sx={{ fontStyle: "italic" }}>
                   {request.reason}
                 </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mt: 0.5, fontWeight: 500 }}
-                >
-                  Requested By:
-                </Typography>
-                <Typography variant="body2">{request.requestedBy}</Typography>
-              </Box>
+                </Box>
             )}
           </Box>
         </Box>
