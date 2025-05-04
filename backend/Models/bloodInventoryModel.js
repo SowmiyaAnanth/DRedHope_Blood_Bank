@@ -9,6 +9,7 @@ const bloodInventorySchema = new mongoose.Schema(
     expiryDate: { type: String, required: true },
     storageLocation: { type: String, required: true },
     collectedBy: { type: String, required: true },
+    used: { type: Number, default: 0 }, // Add this line to your schema
   },
   {
     timestamps: true,

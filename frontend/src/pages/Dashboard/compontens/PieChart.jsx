@@ -27,7 +27,7 @@ export default function BloodStatistics() {
   };
 
   return (
-    <Card sx={{ p: 3, borderRadius: 3, boxShadow: 3, width: 400 }}>
+    <Card sx={{ p: 3, borderRadius: 3, boxShadow: 3, width: 300 }}>
       <CardContent>
         <Typography variant="h6" fontWeight="bold" gutterBottom align="center">
           Blood Inventory Statistics
