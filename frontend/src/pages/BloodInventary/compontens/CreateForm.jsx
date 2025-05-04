@@ -393,6 +393,9 @@ const BloodInventoryForm = ({ open, onClose, onSuccess, defaultValues }) => {
     try {
       if (defaultValues && defaultValues._id) {
         data._id = defaultValues._id;
+        data.used = defaultValues.used || 0; // Preserve existing used value
+      } else {
+        data.used = 0; // For new entry, start with used = 0
       }
       onSuccess(data);
       notifySuccess("Blood inventory saved successfully.");
@@ -401,6 +404,7 @@ const BloodInventoryForm = ({ open, onClose, onSuccess, defaultValues }) => {
       notifyError("Error saving inventory.");
     }
   };
+
 
   const handleCancel = () => {
     reset();

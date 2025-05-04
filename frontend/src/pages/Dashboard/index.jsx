@@ -1,15 +1,43 @@
 import React, { useEffect, useState } from "react";
-import { Box, Typography, Grid, Card, CardContent, Paper } from "@mui/material";
+import { Box, Typography, Grid, Paper } from "@mui/material";
 import InvoiceStatistics from "./compontens/PieChart";
-import BloodTypeHeartbeatChart from "./compontens/BarChart";
 import TestTube from "./compontens/TestingChart";
+import { getAllInventory } from "../../api/bloodInventoryApi";
 
 const BloodInventoryTable = () => {
   const [stats, setStats] = useState({
-    TotalDonor: 628,
-    TotalBlood: 2434,
-    AvailableBlood: 1259,
+    TotalBlood: 0,
+    UsedBlood: 0,
+    AvailableBlood: 0,
   });
+
+  useEffect(() => {
+    const fetchInventoryStats = async () => {
+      try {
+        const { data } = await getAllInventory();
+
+        let total = 0;
+        let used = 0;
+
+        data.forEach((item) => {
+          total += item.quantity || 0;
+          used += item.used || 0;
+        });
+
+        const available = total - used;
+
+        setStats({
+          TotalBlood: total,
+          UsedBlood: used,
+          AvailableBlood: available,
+        });
+      } catch (err) {
+        console.error("Failed to fetch inventory:", err);
+      }
+    };
+
+    fetchInventoryStats();
+  }, []);
 
   return (
     <Box
@@ -22,11 +50,7 @@ const BloodInventoryTable = () => {
         background: "linear-gradient(to bottom, #fcf8ee, #fff5e6)",
       }}
     >
-      {/* Enhanced Stats Cards with Icons and Animations */}
-
-      {/* Chart Components */}
-
-      {/* Donation Impact Section */}
+      {/* Impact Summary */}
       <Box sx={{ maxWidth: "1200px", width: "100%", mt: 4 }}>
         <Paper
           elevation={3}
@@ -38,100 +62,29 @@ const BloodInventoryTable = () => {
           }}
         >
           <Box sx={{ p: 3 }}>
-            <EnhancedBloodDonationImpact units={25} />
+            <EnhancedBloodDonationImpact
+              units={stats.TotalBlood}
+              available={stats.AvailableBlood}
+            />
           </Box>
         </Paper>
       </Box>
+
+      {/* Charts */}
       <Box sx={{ maxWidth: "1200px", width: "100%" }}>
         <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Paper
-              elevation={3}
-              sx={{
-                borderRadius: "16px",
-                overflow: "hidden",
-                height: "100%",
-                transition: "transform 0.3s",
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  p: 2,
-                  background: "linear-gradient(to right, #e53935, #e35d5b)",
-                  color: "white",
-                }}
-              >
-                <Typography variant="h6" fontWeight="bold" align="center">
-                  Real-Time Blood
-                </Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                <TestTube />
-              </Box>
-            </Paper>
+          <Grid item xs={12} md={8}>
+            <ChartCard title="Real-Time Blood" gradient="#e53935, #e35d5b">
+              <TestTube />
+            </ChartCard>
           </Grid>
 
-          <Grid item xs={12} md={4}>
-            <Paper
-              elevation={3}
-              sx={{
-                borderRadius: "16px",
-                overflow: "hidden",
-                height: "100%",
-                transition: "transform 0.3s",
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  p: 2,
-                  background: "linear-gradient(to right, #1e88e5, #5e35b1)",
-                  color: "white",
-                }}
-              >
-                <Typography variant="h6" fontWeight="bold" align="center">
-                  Blood Type Trends
-                </Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                <BloodTypeHeartbeatChart />
-              </Box>
-            </Paper>
-          </Grid>
+         
 
           <Grid item xs={12} md={4}>
-            <Paper
-              elevation={3}
-              sx={{
-                borderRadius: "16px",
-                overflow: "hidden",
-                height: "100%",
-                transition: "transform 0.3s",
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  p: 2,
-                  background: "linear-gradient(to right, #43a047, #2e7d32)",
-                  color: "white",
-                }}
-              >
-                <Typography variant="h6" fontWeight="bold" align="center">
-                  Blood Distribution
-                </Typography>
-              </Box>
-              <Box sx={{ p: 2 }}>
-                <InvoiceStatistics />
-              </Box>
-            </Paper>
+            <ChartCard title="Blood Distribution" gradient="#43a047, #2e7d32">
+              <InvoiceStatistics />
+            </ChartCard>
           </Grid>
         </Grid>
       </Box>
@@ -139,23 +92,49 @@ const BloodInventoryTable = () => {
   );
 };
 
-// Enhanced Blood Donation Impact Component
-const EnhancedBloodDonationImpact = ({ units = 1 }) => {
+// Reusable Chart Card
+const ChartCard = ({ title, gradient, children }) => (
+  <Paper
+    elevation={3}
+    sx={{
+      borderRadius: "16px",
+      overflow: "hidden",
+      height: "100%",
+      transition: "transform 0.3s",
+      "&:hover": {
+        transform: "translateY(-5px)",
+      },
+    }}
+  >
+    <Box
+      sx={{
+        p: 2,
+        background: `linear-gradient(to right, ${gradient})`,
+        color: "white",
+      }}
+    >
+      <Typography variant="h6" fontWeight="bold" align="center">
+        {title}
+      </Typography>
+    </Box>
+    <Box sx={{ p: 2 }}>{children}</Box>
+  </Paper>
+);
+
+// Enhanced Impact Component
+const EnhancedBloodDonationImpact = ({ units, available }) => {
   const [animateCount, setAnimateCount] = useState(0);
   const [showImpact, setShowImpact] = useState(false);
 
-  // Impact metrics based on units
-  const livesImpacted = units * 3; // Each unit can help up to 3 people
-  const surgeries = Math.floor(units * 1.5); // Rough estimate for surgeries supported
-  const accidentVictims = Math.floor(units * 0.8); // Rough estimate for accident victims helped
+  const livesImpacted = units * 3;
+  const surgeries = Math.floor(units * 1.5);
+  const accidentVictims = Math.floor(available);
 
   useEffect(() => {
-    // Start animation after component mounts
     const timer = setTimeout(() => {
       setShowImpact(true);
     }, 500);
 
-    // Animate count up
     if (showImpact) {
       const interval = setInterval(() => {
         setAnimateCount((prev) => {
@@ -163,7 +142,7 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
           clearInterval(interval);
           return prev;
         });
-      }, 100);
+      }, 50);
       return () => clearInterval(interval);
     }
 
@@ -184,7 +163,7 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
           transition: "opacity 0.7s ease, transform 0.7s ease",
         }}
       >
-        {/* Impact Visualization */}
+        {/* Total Units Visualization */}
         <Box
           sx={{
             position: "relative",
@@ -196,7 +175,6 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
             margin: "0 auto",
           }}
         >
-          {/* Pulsing background */}
           <Box
             sx={{
               position: "absolute",
@@ -206,8 +184,6 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
               animation: "pulse 2s infinite ease-in-out",
             }}
           />
-
-          {/* Main impact circle */}
           <Box
             sx={{
               position: "absolute",
@@ -225,40 +201,13 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
                 {animateCount}
               </Typography>
               <Typography variant="body2" color="#c62828" fontWeight="medium">
-                Total Donor
+                Lives Impacted
               </Typography>
             </Box>
           </Box>
-
-          {/* Orbiting hearts */}
-          {[...Array(5)].map((_, i) => (
-            <Box
-              key={i}
-              sx={{
-                position: "absolute",
-                width: 24,
-                height: 24,
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                animation: `orbit ${6 + i}s linear infinite`,
-                animationDelay: `${i * 0.5}s`,
-              }}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="#e53935"
-                stroke="#e53935"
-              >
-                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-              </svg>
-            </Box>
-          ))}
         </Box>
 
-        {/* Impact Statistics */}
+        {/* Stats */}
         <Box
           sx={{
             flex: 1,
@@ -275,104 +224,21 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
             color="#e53935"
             textAlign="center"
           >
-            Blood Details
+            Blood Inventory Summary
           </Typography>
 
-          <Box
-            sx={{
-              display: "flex",
-              gap: 3,
-              flexDirection: { xs: "column", sm: "row" },
-            }}
-          >
-            {/* Surgeries Card */}
-            <Paper
-              sx={{
-                flex: 1,
-                p: 3,
-                borderRadius: 4,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                },
-              }}
-            >
-              <Box sx={{ color: "#e53935", mb: 1 }}>
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
-                </svg>
-              </Box>
-              <Typography variant="h4" fontWeight="bold" color="#e53935">
-                {surgeries}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                textAlign="center"
-              >
-                Total Blood
-              </Typography>
-            </Paper>
-
-            {/* Accident Victims Card */}
-            <Paper
-              sx={{
-                flex: 1,
-                p: 3,
-                borderRadius: 4,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
-                transition: "transform 0.2s",
-                "&:hover": {
-                  transform: "translateY(-5px)",
-                },
-              }}
-            >
-              <Box sx={{ color: "#e53935", mb: 1 }}>
-                <svg
-                  width="32"
-                  height="32"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-              </Box>
-              <Typography variant="h4" fontWeight="bold" color="#e53935">
-                {accidentVictims}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                textAlign="center"
-              >
-                Available Blood
-              </Typography>
-            </Paper>
-          </Box>
+          <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <StatCard value={units} label="Total Blood Units" />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <StatCard value={available} label="Available Blood" />
+            </Grid>
+          </Grid>
         </Box>
       </Box>
 
-      {/* Animation keyframes */}
-      <style jsx global>{`
+      <style jsx="true" global="true">{`
         @keyframes pulse {
           0% {
             transform: scale(0.95);
@@ -387,17 +253,34 @@ const EnhancedBloodDonationImpact = ({ units = 1 }) => {
             opacity: 0.7;
           }
         }
-        @keyframes orbit {
-          0% {
-            transform: rotate(0deg) translateX(100px) rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg) translateX(100px) rotate(-360deg);
-          }
-        }
       `}</style>
     </Box>
   );
 };
+
+// Reusable Stat Card
+const StatCard = ({ value, label }) => (
+  <Paper
+    sx={{
+      p: 3,
+      borderRadius: 4,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
+      transition: "transform 0.2s",
+      "&:hover": {
+        transform: "translateY(-5px)",
+      },
+    }}
+  >
+    <Typography variant="h4" fontWeight="bold" color="#e53935">
+      {value}
+    </Typography>
+    <Typography variant="body2" color="text.secondary" textAlign="center">
+      {label}
+    </Typography>
+  </Paper>
+);
 
 export default BloodInventoryTable;

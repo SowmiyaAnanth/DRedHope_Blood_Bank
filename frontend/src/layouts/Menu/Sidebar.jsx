@@ -67,12 +67,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Profile Section */}
       {isOpen && (
         <Box display="flex" flexDirection="column" alignItems="center" my={2}>
-          <Avatar sx={{ width: 80, height: 80, mb: 2 }} src={men} /> 
+          <Avatar sx={{ width: 80, height: 80, mb: 2 }} src={men} />
           <Typography variant="h6" fontWeight="bold">
-            Thisoharin
+            BloodBank
           </Typography>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            harin12@email.com
+            bloodbank101@gmil.com
           </Typography>
         </Box>
       )}
