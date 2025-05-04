@@ -12,7 +12,7 @@ import DonorList from "./components/DonorList";
 import AddDonorGif from "../../assets/images/add2.gif";
 import TrackDonation from './components/TrackDonation';
 
-import { fetchDonors, saveDonor, deleteDonor } from '../../Api/donorApi';
+import { fetchDonors, saveDonor, deleteDonor } from '../../api/donorAPI';
 
 export default function Donor() {
   const [activeStep, setActiveStep] = useState(0);
@@ -76,9 +76,11 @@ export default function Donor() {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setPreviewImage(reader.result);
+      reader.onloadend = () => {
+        setPreviewImage(reader.result);
+        setFormData(prev => ({ ...prev, image: file }));
+      };
       reader.readAsDataURL(file);
-      setFormData(prev => ({ ...prev, image: file }));
       setIsDetecting(true);
       setDetectionResult(null);
 
@@ -139,14 +141,19 @@ export default function Donor() {
     if (!validateForm()) return;
 
     const data = { ...formData };
+    
+    // If we're editing and no new image was selected, keep the existing image URL
+    if (editingDonor && !data.image) {
+      data.image = editingDonor.image;
+    }
 
     try {
       await saveDonor(data, editingDonor ? editingDonor._id : null);
 
       if (!editingDonor) {
-        setShowThankYou(true); // ✅ Only show popup if it's a new donor
+        setShowThankYou(true);
       } else {
-        setShowList(true); // Redirect to list after edit
+        setShowList(true);
       }
 
       setFormData({
@@ -168,7 +175,7 @@ export default function Donor() {
   const handleEditDonor = (donor) => {
     setEditingDonor(donor);
     setFormData({ ...donor });
-    setPreviewImage(donor.image ? `http://localhost:8000${donor.image}` : null);
+    setPreviewImage(donor.image ? donor.image : null);
     setShowList(false);
   };
 
@@ -285,8 +292,8 @@ export default function Donor() {
                 mt: 3, 
                 mb: 4, 
                 p: 4, 
-                border: '2px dashed #d32f2f',
-                borderRadius: 3,
+                border: '2px dashed #ff1744',
+                borderRadius: '20px',
                 textAlign: 'center',
                 bgcolor: '#fff5f5',
                 transition: 'all 0.3s ease',
@@ -312,11 +319,11 @@ export default function Donor() {
                           src={previewImage} 
                           alt="Preview" 
                           style={{ 
-                            width: '250px', 
-                            height: '250px', 
+                            width: '200px', 
+                            height: '200px', 
                             objectFit: 'cover',
-                            borderRadius: '15px',
-                            border: '3px solid #d32f2f',
+                            borderRadius: '50%',
+                            border: '3px solid #ff1744',
                             boxShadow: '0 4px 20px rgba(211, 47, 47, 0.2)'
                           }} 
                         />
@@ -324,15 +331,16 @@ export default function Donor() {
                           <Box sx={{
                             position: 'absolute',
                             top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '200px',
+                            height: '200px',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
                             bgcolor: 'rgba(0,0,0,0.7)',
-                            borderRadius: '15px',
+                            borderRadius: '50%',
                             gap: 2
                           }}>
                             <CircularProgress sx={{ color: '#fff' }} />
@@ -349,26 +357,39 @@ export default function Donor() {
                           height: '150px', 
                           margin: '0 auto 20px',
                           borderRadius: '50%',
-                          bgcolor: '#ffe0e0',
+                          bgcolor: '#fff',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          border: '3px dashed #d32f2f'
+                          border: '2px dashed #ff1744'
                         }}>
                           <img 
-                            src="https://via.placeholder.com/150" 
+                            src="https://via.placeholder.com/150?text=Upload"
                             alt="Upload" 
                             style={{ 
-                              width: '100px', 
-                              height: '100px',
+                              width: '50px', 
+                              height: '50px',
                               opacity: 0.7
                             }} 
                           />
                         </Box>
-                        <Typography variant="h6" color="primary" sx={{ fontWeight: 600 }}>
+                        <Typography 
+                          variant="h6" 
+                          sx={{ 
+                            color: '#1976d2',
+                            fontWeight: 600,
+                            mb: 1
+                          }}
+                        >
                           Click to Upload Photo
                         </Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: 'text.secondary',
+                            fontSize: '0.9rem'
+                          }}
+                        >
                           Upload a clear photo of your face for age and gender detection
                         </Typography>
                       </Box>
@@ -376,55 +397,63 @@ export default function Donor() {
                   </Box>
                 </label>
 
-                {detectionResult && (
+                {detectionResult && !detectionResult.error && (
                   <Box sx={{ 
                     mt: 3, 
-                    p: 3, 
-                    bgcolor: detectionResult.error ? '#ffebee' : '#e8f5e9',
+                    p: 2, 
+                    bgcolor: '#e8f5e9',
                     borderRadius: 2,
-                    border: `1px solid ${detectionResult.error ? '#ffcdd2' : '#c8e6c9'}`,
-                    boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+                    border: '1px solid #c8e6c9'
                   }}>
-                    {detectionResult.error ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography color="error" sx={{ fontWeight: 500 }}>
-                          {detectionResult.error}
-                        </Typography>
-                      </Box>
-                    ) : (
-                      <Box>
-                        <Typography variant="subtitle1" color="success.main" fontWeight="bold" sx={{ mb: 2 }}>
-                          Face Detected Successfully!
-                        </Typography>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          justifyContent: 'center', 
-                          gap: 2,
-                          flexWrap: 'wrap'
-                        }}>
-                          <Chip 
-                            label={`Age: ${detectionResult.age}`}
-                            color="primary"
-                            variant="outlined"
-                            sx={{ 
-                              fontSize: '1rem',
-                              padding: '20px 10px',
-                              '& .MuiChip-label': { fontWeight: 600 }
-                            }}
-                          />
-                          <Chip 
-                            label={`Gender: ${detectionResult.gender}`}
-                            color="secondary"
-                            variant="outlined"
-                            sx={{ 
-                              fontSize: '1rem',
-                              padding: '20px 10px',
-                              '& .MuiChip-label': { fontWeight: 600 }
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    )}
+                    <Typography 
+                      variant="subtitle1" 
+                      color="success.main" 
+                      fontWeight="bold" 
+                      sx={{ mb: 2 }}
+                    >
+                      Face Detected Successfully!
+                    </Typography>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'center', 
+                      gap: 2,
+                      flexWrap: 'wrap'
+                    }}>
+                      <Chip 
+                        label={`Age: ${detectionResult.age}`}
+                        color="info"
+                        variant="outlined"
+                        sx={{ 
+                          fontSize: '0.9rem',
+                          padding: '15px 10px',
+                          '& .MuiChip-label': { fontWeight: 500 }
+                        }}
+                      />
+                      <Chip 
+                        label={`Gender: ${detectionResult.gender}`}
+                        color="secondary"
+                        variant="outlined"
+                        sx={{ 
+                          fontSize: '0.9rem',
+                          padding: '15px 10px',
+                          '& .MuiChip-label': { fontWeight: 500 }
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                )}
+
+                {detectionResult?.error && (
+                  <Box sx={{ 
+                    mt: 3, 
+                    p: 2, 
+                    bgcolor: '#ffebee',
+                    borderRadius: 2,
+                    border: '1px solid #ffcdd2'
+                  }}>
+                    <Typography color="error" sx={{ fontWeight: 500 }}>
+                      {detectionResult.error}
+                    </Typography>
                   </Box>
                 )}
               </Box>
@@ -737,7 +766,7 @@ export default function Donor() {
                       handleChange(e);
                       // Update donor data if editing
                       if (editingDonor) {
-                        fetch(`http://localhost:8000/donors/${editingDonor._id}`, {
+                        fetch(`http://localhost:5000/api/donors/${editingDonor._id}`, {
                           method: 'PUT',
                           headers: {
                             'Content-Type': 'application/json',

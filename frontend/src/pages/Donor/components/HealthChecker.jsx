@@ -26,53 +26,52 @@ const HealthChecker = ({ donorId }) => {
   useEffect(() => {
     const fetchExisting = async () => {
       try {
-        const res = await fetch(`http://localhost:8001/donors/${donorId}`);
+        const res = await fetch(`http://localhost:5000/api/donors/${donorId}`);
+        if (!res.ok) {
+          throw new Error("Failed to load donor.");
+        }
         const data = await res.json();
 
-        if (res.ok) {
-          const chronicDiseases = data.chronicDiseases?.toLowerCase() || "";
+        const chronicDiseases = data.chronicDiseases?.toLowerCase() || "";
 
-          setHealthData({
-            age: data.age || "",
-            weight: data.weight || "",
-            height: data.height || "",
-            chronicDiseases: data.chronicDiseases || "",
-            recentSurgery: data.recentSurgery || false,
-            onMedication: data.onMedication || false,
-            hadPreviousDonation: data.hadPreviousDonation || false,
-            lastDonationDate: data.lastDonationDate || "",
-          });
+        setHealthData({
+          age: data.age || "",
+          weight: data.weight || "",
+          height: data.height || "",
+          chronicDiseases: data.chronicDiseases || "",
+          recentSurgery: data.recentSurgery || false,
+          onMedication: data.onMedication || false,
+          hadPreviousDonation: data.hadPreviousDonation || false,
+          lastDonationDate: data.lastDonationDate || "",
+        });
 
-          // Check eligibility criteria
-          const reasons = [];
-          const weightOK = Number(data.weight) > 50;
-          const heightOK = Number(data.height) > 150;
-          const ageOK = Number(data.age) >= 18;
-          const hasDisqualifyingDisease = disqualifyingDiseases.some(disease =>
+        // Check eligibility criteria
+        const reasons = [];
+        const weightOK = Number(data.weight) > 50;
+        const heightOK = Number(data.height) > 150;
+        const ageOK = Number(data.age) >= 18;
+        const hasDisqualifyingDisease = disqualifyingDiseases.some(disease =>
+          chronicDiseases.includes(disease)
+        );
+
+        if (!weightOK) reasons.push("Weight must be more than 50kg");
+        if (!heightOK) reasons.push("Height must be more than 150cm");
+        if (!ageOK) reasons.push("Age must be 18 or above");
+        if (hasDisqualifyingDisease) {
+          const foundDiseases = disqualifyingDiseases.filter(disease => 
             chronicDiseases.includes(disease)
           );
+          reasons.push(`Has disqualifying disease(s): ${foundDiseases.join(", ")}`);
+        }
+        if (data.recentSurgery) reasons.push("Recent surgery");
+        if (data.onMedication) reasons.push("Currently on medication");
 
-          if (!weightOK) reasons.push("Weight must be more than 50kg");
-          if (!heightOK) reasons.push("Height must be more than 150cm");
-          if (!ageOK) reasons.push("Age must be 18 or above");
-          if (hasDisqualifyingDisease) {
-            const foundDiseases = disqualifyingDiseases.filter(disease => 
-              chronicDiseases.includes(disease)
-            );
-            reasons.push(`Has disqualifying disease(s): ${foundDiseases.join(", ")}`);
-          }
-          if (data.recentSurgery) reasons.push("Recent surgery");
-          if (data.onMedication) reasons.push("Currently on medication");
+        setEligibilityReasons(reasons);
 
-          setEligibilityReasons(reasons);
-
-          if (reasons.length === 0) {
-            setEligibilityStatus("✅ Eligible for Donation");
-          } else {
-            setEligibilityStatus("❌ Not Eligible for Donation");
-          }
+        if (reasons.length === 0) {
+          setEligibilityStatus("✅ Eligible for Donation");
         } else {
-          throw new Error("Failed to load donor.");
+          setEligibilityStatus("❌ Not Eligible for Donation");
         }
       } catch (err) {
         console.error("❌ Error loading donor:", err);

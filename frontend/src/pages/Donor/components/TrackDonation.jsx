@@ -25,19 +25,18 @@ const TrackDonation = ({ donorId }) => {
       }
       
       try {
-        const response = await fetch(`http://localhost:8001/donors/${donorId}`);
-        const data = await response.json();
-        
-        if (response.ok) {
-          setDonorData(data);
-          if (data.lastDonationDate) {
-            calculateNextDonation(data.lastDonationDate);
-          }
-        } else {
+        const response = await fetch(`http://localhost:5000/api/donors/${donorId}`);
+        if (!response.ok) {
           throw new Error("Failed to load donor data");
         }
+        const data = await response.json();
+        setDonorData(data);
+        if (data.lastDonationDate) {
+          calculateNextDonation(data.lastDonationDate);
+        }
       } catch (err) {
-        setError("Failed to load donor information");
+        console.error("Error fetching donor:", err);
+        setError("Failed to load donor information. Please try again later.");
       } finally {
         setLoading(false);
       }
