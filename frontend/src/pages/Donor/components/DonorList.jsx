@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Card, CardContent, CardMedia, Typography, Grid, Container, Box,
   IconButton, Tooltip, Button, Modal, TextField, InputAdornment,
-  Chip
+  Chip, Divider, Paper
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
@@ -11,6 +11,8 @@ import PeopleIcon from "@mui/icons-material/People";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import DescriptionIcon from '@mui/icons-material/Description';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import "@fontsource/merriweather";
 import AddDonorGif from "../../../assets/images/add.gif";
 
@@ -24,6 +26,9 @@ import trackIcon from "../../../assets/images/track.png";
 import HealthChecker from "./HealthChecker";
 import TrackDonation from "./TrackDonation";
 import AIChatBox from "./AIChatBox";
+import { fetchDonors as apiFetchDonors, deleteDonor as apiDeleteDonor } from "../../../api/donorAPI";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export default function DonorList({ onCreateClick, onEditClick, onDeleteClick }) {
   const [donors, setDonors] = useState([]);
@@ -40,18 +45,21 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
     ineligibleDonors: 0,
     waitingDonors: 0
   });
+  const [error, setError] = useState("");
+  const [openReportModal, setOpenReportModal] = useState(false);
+  const [selectedDonorReport, setSelectedDonorReport] = useState(null);
+  const reportTemplateRef = useRef(null);
 
   const disqualifyingDiseases = ["diabetes", "tuberculosis", "hiv", "aids", "heart disease", "cancer"];
-  const apiUrl = "http://localhost:8001/donors";
 
   useEffect(() => {
-    fetchDonors();
+    fetchDonorsList();
   }, []);
 
-  const fetchDonors = async () => {
+  const fetchDonorsList = async () => {
     try {
-      const response = await fetch(apiUrl);
-      const data = await response.json();
+      setError("");
+      const data = await apiFetchDonors();
       setDonors(data);
       setFilteredDonors(data);
       
@@ -74,6 +82,7 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
       });
     } catch (error) {
       console.error("Error fetching donors:", error);
+      setError("Failed to load donors. Please try again later.");
     }
   };
 
@@ -81,7 +90,8 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
     const value = e.target.value.toLowerCase();
     setSearchText(value);
     const filtered = donors.filter((donor) =>
-      donor.bloodGroup.toLowerCase().includes(value)
+      donor.bloodGroup?.toLowerCase().includes(value) ||
+      donor.fullName?.toLowerCase().includes(value)
     );
     setFilteredDonors(filtered);
   };
@@ -89,13 +99,14 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this donor?")) {
       try {
-        await fetch(`${apiUrl}/${id}`, { method: "DELETE" });
+        await apiDeleteDonor(id);
         const updated = donors.filter((donor) => donor._id !== id);
         setDonors(updated);
         setFilteredDonors(updated);
         if (onDeleteClick) onDeleteClick(id);
       } catch (error) {
         console.error("Error deleting donor:", error);
+        setError("Failed to delete donor. Please try again.");
       }
     }
   };
@@ -119,12 +130,12 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
 
   const handleHealthSubmit = () => {
     setOpenHealthModal(false);
-    fetchDonors();
+    fetchDonorsList();
   };
 
   const handleTrackSubmit = () => {
     setOpenTrackModal(false);
-    fetchDonors();
+    fetchDonorsList();
   };
 
   const handleButtonClick = () => {
@@ -133,6 +144,75 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
       setButtonClicked(false);
       onCreateClick();
     }, 300);
+  };
+
+  const handleGenerateReport = (donor) => {
+    setSelectedDonorReport(donor);
+    setOpenReportModal(true);
+  };
+
+  const downloadReport = async () => {
+    if (!selectedDonorReport) return;
+
+    const input = reportTemplateRef.current;
+    
+    // Wait for images to load
+    const images = input.getElementsByTagName('img');
+    await Promise.all(Array.from(images).map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    }));
+
+    try {
+      const canvas = await html2canvas(input, { 
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: input.scrollWidth,
+        windowHeight: input.scrollHeight
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let position = 0;
+
+      // If content height is greater than page height, create multiple pages
+      while (position < imgHeight) {
+        // Add new page if it's not the first page
+        if (position > 0) {
+          pdf.addPage();
+        }
+        
+        // Calculate remaining height for this page
+        const heightLeft = imgHeight - position;
+        const pageHeightToUse = Math.min(pageHeight, heightLeft);
+        
+        // Add portion of the image to this page
+        pdf.addImage(
+          canvas.toDataURL('image/png'),
+          'PNG',
+          0,
+          position > 0 ? -position : 0, // Adjust y position for subsequent pages
+          imgWidth,
+          imgHeight
+        );
+        
+        position += pageHeight;
+      }
+
+      pdf.save(`${selectedDonorReport.fullName}_donor_report.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      // You might want to show an error message to the user here
+    }
   };
 
   // ✅ Corrected Eligibility Check (with Age Check)
@@ -348,8 +428,8 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
                         <CardMedia 
                           component="img" 
                           height="220" 
-                          image={donor.image ? `http://localhost:8001${donor.image}` : "https://via.placeholder.com/150"} 
-                          alt="Donor"
+                          image={donor.image || "https://via.placeholder.com/150?text=No+Image"} 
+                          alt={donor.fullName}
                           sx={{
                             objectFit: "cover",
                             transition: "transform 0.3s ease-in-out",
@@ -561,6 +641,17 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
                               <img src={trackIcon} width={24} alt="Track" />
                             </IconButton>
                           </Tooltip>
+                          <Tooltip title="Generate Report" arrow>
+                            <IconButton 
+                              onClick={() => handleGenerateReport(donor)}
+                              sx={{ 
+                                bgcolor: "#e3f2fd",
+                                '&:hover': { bgcolor: "#bbdefb" }
+                              }}
+                            >
+                              <DescriptionIcon />
+                            </IconButton>
+                          </Tooltip>
                           <Tooltip title="Edit" arrow>
                             <IconButton 
                               onClick={() => handleEdit(donor._id)}
@@ -606,6 +697,351 @@ export default function DonorList({ onCreateClick, onEditClick, onDeleteClick })
         <Box sx={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: 500, bgcolor: "background.paper", boxShadow: 24, borderRadius: 2, p: 4 }}>
           {selectedDonor && <TrackDonation donorId={selectedDonor._id} onSaved={handleTrackSubmit} />}
         </Box>
+      </Modal>
+
+      {/* Report Modal */}
+      <Modal 
+        open={openReportModal} 
+        onClose={() => setOpenReportModal(false)}
+        aria-labelledby="donor-report-modal"
+      >
+        <Paper sx={{ 
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '95%',
+          maxWidth: '1000px',
+          height: '90vh',
+          bgcolor: 'background.paper',
+          boxShadow: 24,
+          borderRadius: 2,
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          {selectedDonorReport && (
+            <>
+              {/* Fixed Header */}
+              <Box sx={{ 
+                p: 3, 
+                borderBottom: '1px solid #e0e0e0',
+                bgcolor: '#fff',
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <Typography variant="h5" component="h2" fontWeight="bold" color="primary">
+                  Donor Report Preview
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<FileDownloadIcon />}
+                    onClick={downloadReport}
+                    sx={{ bgcolor: '#2e7d32', '&:hover': { bgcolor: '#1b5e20' } }}
+                  >
+                    Download PDF
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    onClick={() => setOpenReportModal(false)}
+                    color="primary"
+                  >
+                    Close
+                  </Button>
+                </Box>
+              </Box>
+
+              {/* Scrollable Content */}
+              <Box sx={{ 
+                flex: 1,
+                overflow: 'auto',
+                p: 3,
+                '&::-webkit-scrollbar': {
+                  width: '8px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: '#f1f1f1',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: '#888',
+                  borderRadius: '4px',
+                },
+                '&::-webkit-scrollbar-thumb:hover': {
+                  background: '#555',
+                }
+              }}>
+                {/* Report Template */}
+                <Box ref={reportTemplateRef} sx={{ 
+                  p: 2, 
+                  bgcolor: '#fff',
+                  width: '210mm',  // A4 width
+                  margin: '0 auto',
+                  boxShadow: '0 0 10px rgba(0,0,0,0.1)',
+                  borderRadius: 1
+                }}>
+                  {/* Header */}
+                  <Box sx={{ 
+                    textAlign: 'center', 
+                    mb: 2
+                  }}>
+                    <Typography variant="h4" sx={{ 
+                      color: '#d32f2f', 
+                      fontWeight: 700, 
+                      mb: 0.5,
+                      fontSize: '1.5rem'
+                    }}>
+                      Red Hope Blood Bank
+                    </Typography>
+                    <Typography variant="subtitle1" sx={{ 
+                      color: '#666',
+                      fontWeight: 500,
+                      mb: 1,
+                      fontSize: '0.9rem'
+                    }}>
+                      Donor Information Report
+                    </Typography>
+                    <Divider sx={{ borderColor: '#d32f2f' }} />
+                  </Box>
+
+                  {/* Donor Info Card */}
+                  <Box sx={{ 
+                    bgcolor: '#fff5f5',
+                    borderRadius: '8px',
+                    p: 2,
+                    mb: 2,
+                    display: 'flex',
+                    gap: 2,
+                    alignItems: 'flex-start'
+                  }}>
+                    {/* Donor Image */}
+                    <Box sx={{ 
+                      width: 100,
+                      height: 100,
+                      borderRadius: '50%',
+                      border: '2px solid #d32f2f',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      bgcolor: '#fff'
+                    }}>
+                      <img 
+                        src={selectedDonorReport.image || "https://via.placeholder.com/100"}
+                        alt={selectedDonorReport.fullName}
+                        style={{ 
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover'
+                        }}
+                      />
+                    </Box>
+
+                    {/* Donor Details */}
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="h6" sx={{ 
+                        color: '#d32f2f',
+                        fontWeight: 700,
+                        mb: 1,
+                        fontSize: '1.1rem'
+                      }}>
+                        {selectedDonorReport.fullName}
+                      </Typography>
+
+                      <Grid container spacing={1}>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Blood Group
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {selectedDonorReport.bloodGroup}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Age
+                          </Typography>
+                          <Typography variant="body1">
+                            {selectedDonorReport.age} years
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Gender
+                          </Typography>
+                          <Typography variant="body1">
+                            {selectedDonorReport.gender}
+                          </Typography>
+                        </Grid>
+                        <Grid item xs={6}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Phone
+                          </Typography>
+                          <Typography variant="body1">
+                            {selectedDonorReport.phoneNumber}
+                          </Typography>
+                        </Grid>
+                      </Grid>
+                    </Box>
+                  </Box>
+
+                  {/* Medical Information */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="h6" sx={{ 
+                      color: '#d32f2f',
+                      fontWeight: 600,
+                      mb: 1,
+                      fontSize: '1rem'
+                    }}>
+                      Medical Information
+                    </Typography>
+
+                    <Grid container spacing={1}>
+                      <Grid item xs={6}>
+                        <Paper sx={{ p: 1, bgcolor: '#f5f5f5' }}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Weight
+                          </Typography>
+                          <Typography variant="body1">
+                            {selectedDonorReport.weight || 'N/A'} kg
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Paper sx={{ p: 1, bgcolor: '#f5f5f5' }}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Height
+                          </Typography>
+                          <Typography variant="body1">
+                            {selectedDonorReport.height || 'N/A'} cm
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <Paper sx={{ p: 1, bgcolor: '#f5f5f5' }}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Chronic Diseases
+                          </Typography>
+                          <Typography variant="body1">
+                            {selectedDonorReport.chronicDiseases || 'None'}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Paper sx={{ 
+                          p: 1, 
+                          bgcolor: selectedDonorReport.recentSurgery ? '#ffebee' : '#e8f5e9'
+                        }}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Recent Surgery
+                          </Typography>
+                          <Typography variant="body1" sx={{ 
+                            color: selectedDonorReport.recentSurgery ? '#d32f2f' : '#2e7d32',
+                            fontWeight: 'bold'
+                          }}>
+                            {selectedDonorReport.recentSurgery ? 'YES' : 'NO'}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Paper sx={{ 
+                          p: 1, 
+                          bgcolor: selectedDonorReport.onMedication ? '#ffebee' : '#e8f5e9'
+                        }}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            On Medication
+                          </Typography>
+                          <Typography variant="body1" sx={{ 
+                            color: selectedDonorReport.onMedication ? '#d32f2f' : '#2e7d32',
+                            fontWeight: 'bold'
+                          }}>
+                            {selectedDonorReport.onMedication ? 'YES' : 'NO'}
+                          </Typography>
+                        </Paper>
+                      </Grid>
+                    </Grid>
+                  </Box>
+
+                  {/* Donation History */}
+                  <Box sx={{ mb: 2 }}>
+                    <Typography variant="h6" sx={{ 
+                      color: '#d32f2f',
+                      fontWeight: 600,
+                      mb: 1,
+                      fontSize: '1rem'
+                    }}>
+                      Donation History
+                    </Typography>
+
+                    <Paper sx={{ 
+                      p: 2,
+                      bgcolor: selectedDonorReport.hadPreviousDonation ? '#fff3e0' : '#f5f5f5',
+                      border: `1px solid ${selectedDonorReport.hadPreviousDonation ? '#ffe0b2' : '#e0e0e0'}`
+                    }}>
+                      <Grid container spacing={2}>
+                        <Grid item xs={12}>
+                          <Typography variant="body2" sx={{ color: '#666' }}>
+                            Previous Donation Status
+                          </Typography>
+                          <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                            {selectedDonorReport.hadPreviousDonation ? 'Has Previous Donations' : 'No Previous Donations'}
+                          </Typography>
+                        </Grid>
+
+                        {selectedDonorReport.hadPreviousDonation && (
+                          <>
+                            <Grid item xs={6}>
+                              <Typography variant="body2" sx={{ color: '#666' }}>
+                                Last Donation Date
+                              </Typography>
+                              <Typography variant="body1" sx={{ color: '#f57c00' }}>
+                                {selectedDonorReport.lastDonationDate 
+                                  ? new Date(selectedDonorReport.lastDonationDate).toLocaleDateString()
+                                  : 'N/A'
+                                }
+                              </Typography>
+                            </Grid>
+                            <Grid item xs={6}>
+                              <Typography variant="body2" sx={{ color: '#666' }}>
+                                Next Eligible Date
+                              </Typography>
+                              <Typography variant="body1" sx={{ color: '#2e7d32' }}>
+                                {selectedDonorReport.lastDonationDate 
+                                  ? (() => {
+                                      const nextDate = new Date(selectedDonorReport.lastDonationDate);
+                                      nextDate.setMonth(nextDate.getMonth() + 6);
+                                      return nextDate.toLocaleDateString();
+                                    })()
+                                  : 'N/A'
+                                }
+                              </Typography>
+                            </Grid>
+                          </>
+                        )}
+                      </Grid>
+                    </Paper>
+                  </Box>
+
+                  {/* Footer */}
+                  <Box sx={{ 
+                    mt: 'auto', 
+                    pt: 1, 
+                    borderTop: '1px solid #d32f2f', 
+                    textAlign: 'center' 
+                  }}>
+                    <Typography variant="caption" color="text.secondary">
+                      Report Generated: {new Date().toLocaleString()}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: '#d32f2f', display: 'block' }}>
+                      Red Hope Blood Bank - Saving Lives Together
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
+            </>
+          )}
+        </Paper>
       </Modal>
 
       {/* Add AI Chat Box */}
